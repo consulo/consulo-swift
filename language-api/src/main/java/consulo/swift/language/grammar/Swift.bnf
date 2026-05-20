@@ -1,0 +1,964 @@
+/*
+ * Copyright 2013-2026 consulo.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Swift grammar. Whitespace-sensitive operator predicates are handled in the
+// lexer (operators are classified into PREFIX_OP / POSTFIX_OP / BINARY_OP at
+// emit time); Grammar-Kit pinning resolves the remaining ambiguities.
+
+{
+  parserClass            = "consulo.swift.language.impl.syntax.SwiftSyntaxParser"
+  // Custom util adds support for Swift contextual keywords (`some`, etc.):
+  // they are lexed as IDENTIFIER and remapped on demand to their keyword
+  // token kind.
+  parserUtilClass        = "consulo.swift.language.impl.syntax.SwiftParserUtil"
+  extends                = "consulo.swift.language.impl.psi.SwiftElementImpl"
+  version                = "3"
+
+  psiClassPrefix         = "Swift"
+  psiImplClassSuffix     = "Impl"
+  psiPackage             = "consulo.swift.language.psi"
+  psiImplPackage         = "consulo.swift.language.impl.psi"
+  psiVisitorName         = "SwiftElementVisitor"
+
+  elementTypeHolderClass = "consulo.swift.language.psi.SwiftTypes"
+  elementTypeClass       = "consulo.swift.language.SwiftElementType"
+  tokenTypeClass         = "consulo.swift.language.SwiftTokenType"
+
+  implements("statement|declaration|expression|pattern|type|attribute|condition")
+      = "consulo.swift.language.psi.SwiftElement"
+  extends(".*_statement")   = statement
+  extends(".*_declaration") = declaration
+  extends(".*_expression")  = expression
+  extends(".*_pattern")     = pattern
+  extends("the_.*")         = type
+  extends(".*_literal")     = expression
+
+  tokens = [
+    // --- Keywords (declaration) ---
+    IMPORT_KEYWORD          = 'import'
+    LET_KEYWORD             = 'let'
+    VAR_KEYWORD             = 'var'
+    TYPEALIAS_KEYWORD       = 'typealias'
+    FUNC_KEYWORD            = 'func'
+    ENUM_KEYWORD            = 'enum'
+    STRUCT_KEYWORD          = 'struct'
+    CLASS_KEYWORD           = 'class'
+    PROTOCOL_KEYWORD        = 'protocol'
+    INIT_KEYWORD            = 'init'
+    DEINIT_KEYWORD          = 'deinit'
+    EXTENSION_KEYWORD       = 'extension'
+    SUBSCRIPT_KEYWORD       = 'subscript'
+    OPERATOR_KEYWORD        = 'operator'
+    PRECEDENCEGROUP_KEYWORD = 'precedencegroup'
+    ASSOCIATEDTYPE_KEYWORD  = 'associatedtype'
+    INDIRECT_KEYWORD                              // contextual, see below
+
+    // --- Keywords (statement) ---
+    IF_KEYWORD              = 'if'
+    ELSE_KEYWORD            = 'else'
+    GUARD_KEYWORD           = 'guard'
+    SWITCH_KEYWORD          = 'switch'
+    CASE_KEYWORD            = 'case'
+    DEFAULT_KEYWORD         = 'default'
+    FOR_KEYWORD             = 'for'
+    IN_KEYWORD              = 'in'
+    WHILE_KEYWORD           = 'while'
+    REPEAT_KEYWORD          = 'repeat'
+    DO_KEYWORD              = 'do'
+    DEFER_KEYWORD           = 'defer'
+    BREAK_KEYWORD           = 'break'
+    CONTINUE_KEYWORD        = 'continue'
+    FALLTHROUGH_KEYWORD     = 'fallthrough'
+    RETURN_KEYWORD          = 'return'
+    THROW_KEYWORD           = 'throw'
+    TRY_KEYWORD             = 'try'
+    CATCH_KEYWORD           = 'catch'
+    WHERE_KEYWORD            = 'where'
+    AS_KEYWORD              = 'as'
+    IS_KEYWORD              = 'is'
+
+    // --- Keywords (expression) ---
+    SELF_KEYWORD            = 'self'
+    SELF_TYPE_KEYWORD       = 'Self'
+    SUPER_KEYWORD           = 'super'
+    NIL_KEYWORD             = 'nil'
+    TRUE_KEYWORD            = 'true'
+    FALSE_KEYWORD           = 'false'
+    THROWS_KEYWORD          = 'throws'
+    RETHROWS_KEYWORD        = 'rethrows'
+    INOUT_KEYWORD           = 'inout'
+    ANY_KEYWORD             = 'Any'
+    TYPE_TYPE_KEYWORD       = 'Type'
+    PROTOCOL_TYPE_KEYWORD   = 'Protocol'
+    // --- Contextual keywords (Swift lexes these positions as IDENTIFIER;
+    // SwiftParserUtil remaps to the dedicated token only when the grammar
+    // expects it). This lets all of these names also be used as identifiers
+    // — `let some = 5`, `func lazy() {}`, `var get: Int = 0` etc. ---
+    SOME_KEYWORD            // opaque type marker (Swift 5.1+)
+
+    // --- Hard access-level modifiers (always keywords) ---
+    PRIVATE_KEYWORD         = 'private'
+    FILEPRIVATE_KEYWORD     = 'fileprivate'
+    INTERNAL_KEYWORD        = 'internal'
+    PUBLIC_KEYWORD          = 'public'
+    OPEN_KEYWORD            = 'open'
+    STATIC_KEYWORD          = 'static'
+
+    // --- Contextual declaration modifiers ---
+    FINAL_KEYWORD
+    LAZY_KEYWORD
+    WEAK_KEYWORD
+    UNOWNED_KEYWORD
+    MUTATING_KEYWORD
+    NONMUTATING_KEYWORD
+    OVERRIDE_KEYWORD
+    REQUIRED_KEYWORD
+    OPTIONAL_KEYWORD
+    DYNAMIC_KEYWORD
+    CONVENIENCE_KEYWORD
+    PREFIX_KEYWORD
+    INFIX_KEYWORD
+    POSTFIX_KEYWORD
+
+    // --- Contextual property accessors ---
+    GET_KEYWORD
+    SET_KEYWORD
+    WILLSET_KEYWORD
+    DIDSET_KEYWORD
+
+    // --- Contextual precedence-group keywords ---
+    LEFT_KEYWORD
+    RIGHT_KEYWORD
+    NONE_KEYWORD
+    ASSOCIATIVITY_KEYWORD
+    HIGHERTHAN_KEYWORD
+    LOWERTHAN_KEYWORD
+    ASSIGNMENT_KEYWORD
+
+    // --- Compiler directives ---
+    HASH_IF                 = '#if'
+    HASH_ELSEIF             = '#elseif'
+    HASH_ELSE               = '#else'
+    HASH_ENDIF              = '#endif'
+    HASH_SOURCELOCATION     = '#sourceLocation'
+    HASH_AVAILABLE          = '#available'
+    HASH_SELECTOR           = '#selector'
+    HASH_KEYPATH            = '#keyPath'
+    HASH_FILE               = '#file'
+    HASH_LINE               = '#line'
+    HASH_COLUMN             = '#column'
+    HASH_FUNCTION           = '#function'
+    HASH_DSOHANDLE          = '#dsohandle'
+    HASH_COLOR_LITERAL      = '#colorLiteral'
+    HASH_FILE_LITERAL       = '#fileLiteral'
+    HASH_IMAGE_LITERAL      = '#imageLiteral'
+
+    // --- Punctuation ---
+    LBRACE                  = '{'
+    RBRACE                  = '}'
+    LPAREN                  = '('
+    RPAREN                  = ')'
+    LBRACK                  = '['
+    RBRACK                  = ']'
+    COMMA                   = ','
+    SEMI                    = ';'
+    COLON                   = ':'
+    DOT                     = '.'
+    AT                      = '@'
+    BACKTICK                = '`'
+
+    // --- Reserved operator tokens ---
+    EQ                      = '='
+    ARROW                   = '->'
+    LT                      = '<'
+    GT                      = '>'
+    QUESTION                = '?'
+    EXCL                    = '!'
+    AMP                     = '&'
+    ELLIPSIS                = '...'
+    HALF_OPEN_RANGE         = '..<'
+    DOUBLE_DOT_EQ           = '..='   // unused in Swift 3 but reserved
+    UNDERSCORE              = '_'
+
+    // --- Token classes from the lexer ---
+    IDENTIFIER
+    // OPERATOR is retained as a legacy alias; the lexer classifies actual
+    // operators into PREFIX_OP / POSTFIX_OP / BINARY_OP using Swift's
+    // whitespace-sensitive rules.
+    OPERATOR
+    PREFIX_OP
+    POSTFIX_OP
+    BINARY_OP
+    DOT_OPERATOR
+    IMPLICIT_PARAMETER_NAME
+    BINARY_LITERAL
+    OCTAL_LITERAL
+    HEXADECIMAL_LITERAL
+    DECIMAL_LITERAL
+    PURE_DECIMAL_DIGITS
+    FLOATING_POINT_LITERAL
+    STATIC_STRING_LITERAL
+    INTERPOLATED_STRING_LITERAL
+    LINE_COMMENT
+    BLOCK_COMMENT
+    PLATFORM_NAME_PLATFORM_VERSION
+  ]
+}
+
+// ===========================================================================
+//  Top level
+// ===========================================================================
+
+top_level ::= statement* {recoverWhile = top_level_recover_}
+private top_level_recover_ ::= !<<eof>>
+
+statements ::= statement+
+
+statement ::=
+    declaration                  SEMI?
+  | loop_statement                SEMI?
+  | branch_statement              SEMI?
+  | labeled_statement             SEMI?
+  | control_transfer_statement    SEMI?
+  | defer_statement               SEMI?
+  | do_statement                  SEMI?
+  | compiler_control_statement    SEMI?
+  | expression_statement
+
+private expression_statement ::= expression SEMI?
+
+private statement_recover_ ::= !(SEMI | RBRACE | <<eof>>
+  | AT
+  | IMPORT_KEYWORD | LET_KEYWORD | VAR_KEYWORD | TYPEALIAS_KEYWORD
+  | FUNC_KEYWORD | ENUM_KEYWORD | STRUCT_KEYWORD | CLASS_KEYWORD
+  | PROTOCOL_KEYWORD | INIT_KEYWORD | DEINIT_KEYWORD | EXTENSION_KEYWORD
+  | SUBSCRIPT_KEYWORD | OPERATOR_KEYWORD | PRECEDENCEGROUP_KEYWORD
+  | ASSOCIATEDTYPE_KEYWORD | INDIRECT_KEYWORD
+  | IF_KEYWORD | ELSE_KEYWORD | GUARD_KEYWORD | SWITCH_KEYWORD | FOR_KEYWORD
+  | WHILE_KEYWORD | REPEAT_KEYWORD | DO_KEYWORD | DEFER_KEYWORD
+  | BREAK_KEYWORD | CONTINUE_KEYWORD | FALLTHROUGH_KEYWORD
+  | RETURN_KEYWORD | THROW_KEYWORD | HASH_IF | HASH_SOURCELOCATION
+  | CASE_KEYWORD | DEFAULT_KEYWORD | CATCH_KEYWORD
+  | PRIVATE_KEYWORD | FILEPRIVATE_KEYWORD | INTERNAL_KEYWORD
+  | PUBLIC_KEYWORD | OPEN_KEYWORD
+  | STATIC_KEYWORD | FINAL_KEYWORD | LAZY_KEYWORD
+  | WEAK_KEYWORD | UNOWNED_KEYWORD
+  | MUTATING_KEYWORD | NONMUTATING_KEYWORD
+  | OVERRIDE_KEYWORD | REQUIRED_KEYWORD | OPTIONAL_KEYWORD
+  | DYNAMIC_KEYWORD | CONVENIENCE_KEYWORD
+  | PREFIX_KEYWORD | INFIX_KEYWORD | POSTFIX_KEYWORD)
+
+code_block ::= LBRACE statements? RBRACE { pin = 1 }
+
+// ===========================================================================
+//  Loop statements
+// ===========================================================================
+
+loop_statement ::= for_in_statement | while_statement | repeat_while_statement
+
+for_in_statement ::= FOR_KEYWORD CASE_KEYWORD? pattern IN_KEYWORD cond_expression where_clause? code_block { pin = 1 }
+
+while_statement ::= WHILE_KEYWORD condition_list code_block { pin = 1 }
+
+repeat_while_statement ::= REPEAT_KEYWORD code_block WHILE_KEYWORD expression { pin = 1 }
+
+condition_list ::= condition (COMMA condition)*
+
+condition ::=
+    availability_condition
+  | case_condition
+  | optional_binding_condition
+  | cond_expression
+
+// In condition contexts (if/while/guard), the initializer expression must
+// not consume the trailing block; use cond_expression instead of expression.
+case_condition ::= CASE_KEYWORD pattern EQ cond_expression where_clause? { pin = 1 }
+
+optional_binding_condition ::= (LET_KEYWORD | VAR_KEYWORD) pattern EQ cond_expression { pin = 1 }
+
+availability_condition ::= HASH_AVAILABLE LPAREN availability_argument (COMMA availability_argument)* RPAREN { pin = 1 }
+
+// In Swift the lexer can fuse "iOS 10.0" into a single PLATFORM_NAME_PLATFORM_VERSION
+// token, but our JFlex lexer emits the components separately. Accept either form.
+availability_argument ::= any_operator                                            // '*'
+                        | IDENTIFIER (DECIMAL_LITERAL | FLOATING_POINT_LITERAL)?  // iOS 10 or iOS 10.0
+                        | PLATFORM_NAME_PLATFORM_VERSION
+
+// ===========================================================================
+//  Branch statements
+// ===========================================================================
+
+branch_statement ::= if_statement | guard_statement | switch_statement
+
+if_statement ::= IF_KEYWORD condition_list code_block else_clause? { pin = 1 }
+
+else_clause ::= ELSE_KEYWORD (if_statement | code_block)
+
+guard_statement ::= GUARD_KEYWORD condition_list ELSE_KEYWORD code_block { pin = 1 }
+
+switch_statement ::= SWITCH_KEYWORD cond_expression LBRACE switch_case* RBRACE { pin = 1 }
+
+switch_case ::= (case_label | default_label) statements
+
+case_label ::= CASE_KEYWORD case_item_list COLON { pin = 1 }
+default_label ::= DEFAULT_KEYWORD COLON { pin = 1 }
+
+case_item_list ::= case_item (COMMA case_item)*
+case_item ::= pattern where_clause?
+
+// where-clause comes between a pattern and a `{ ... }` body in for-in,
+// catch, and case contexts. Use cond_expression so trailing closures don't
+// devour the following block.
+where_clause ::= WHERE_KEYWORD cond_expression
+
+// ===========================================================================
+//  Labeled / control-transfer / defer / do
+// ===========================================================================
+
+labeled_statement ::= statement_label (loop_statement | if_statement | switch_statement | do_statement)
+statement_label ::= IDENTIFIER COLON
+
+control_transfer_statement ::=
+    break_statement
+  | continue_statement
+  | fallthrough_statement
+  | return_statement
+  | throw_statement
+
+break_statement       ::= BREAK_KEYWORD       IDENTIFIER? { pin = 1 }
+continue_statement    ::= CONTINUE_KEYWORD    IDENTIFIER? { pin = 1 }
+fallthrough_statement ::= FALLTHROUGH_KEYWORD              { pin = 1 }
+return_statement      ::= RETURN_KEYWORD      expression?  { pin = 1 }
+throw_statement       ::= THROW_KEYWORD       expression   { pin = 1 }
+
+defer_statement ::= DEFER_KEYWORD code_block { pin = 1 }
+
+do_statement ::= DO_KEYWORD code_block catch_clause* { pin = 1 }
+// Negative-lookahead on `{` keeps `catch { ... }` from greedily parsing the
+// body as a closure-expression pattern.
+catch_clause ::= CATCH_KEYWORD catch_pattern? where_clause? code_block { pin = 1 }
+private catch_pattern ::= !LBRACE pattern
+
+// ===========================================================================
+//  Compiler-control statements
+// ===========================================================================
+
+compiler_control_statement ::= conditional_compilation_block | line_control_statement
+
+conditional_compilation_block ::=
+    HASH_IF compilation_condition statements?
+    (HASH_ELSEIF compilation_condition statements?)*
+    (HASH_ELSE statements?)?
+    HASH_ENDIF { pin = 1 }
+
+compilation_condition ::= compilation_or_condition
+
+private compilation_or_condition  ::= compilation_and_condition  (BINARY_OP compilation_and_condition)*
+private compilation_and_condition ::= compilation_unary_condition (BINARY_OP compilation_unary_condition)*
+private compilation_unary_condition ::= EXCL? compilation_primary
+private compilation_primary ::=
+    platform_condition
+  | boolean_literal
+  | LPAREN compilation_condition RPAREN
+  | IDENTIFIER
+
+platform_condition ::=
+    IDENTIFIER LPAREN IDENTIFIER RPAREN
+
+line_control_statement ::=
+    HASH_SOURCELOCATION LPAREN
+      (IDENTIFIER COLON STATIC_STRING_LITERAL COMMA IDENTIFIER COLON integer_literal)?
+    RPAREN { pin = 1 }
+
+// ===========================================================================
+//  Generics
+// ===========================================================================
+
+generic_parameter_clause ::= LT generic_parameter (COMMA generic_parameter)* GT { pin = 1 }
+generic_parameter ::= type_name (COLON (protocol_composition_type | type_identifier))?
+
+generic_argument_clause ::= LT type (COMMA type)* GT
+generic_where_clause ::= WHERE_KEYWORD requirement (COMMA requirement)*
+requirement ::= conformance_requirement | same_type_requirement
+conformance_requirement ::= type_identifier COLON (protocol_composition_type | type_identifier)
+same_type_requirement   ::= type_identifier BINARY_OP type  // '==' classified as binary
+
+// ===========================================================================
+//  Declarations
+// ===========================================================================
+
+declaration ::=
+    import_declaration
+  | typealias_declaration
+  | function_declaration
+  | enum_declaration
+  | struct_declaration
+  | class_declaration
+  | protocol_declaration
+  | initializer_declaration
+  | deinitializer_declaration
+  | extension_declaration
+  | subscript_declaration
+  | operator_declaration
+  | precedence_group_declaration
+  | constant_declaration
+  | variable_declaration
+
+declarations ::= declaration+
+
+// ----- import -----
+import_declaration ::= attributes? IMPORT_KEYWORD import_kind? import_path { pin = 2 }
+import_kind ::= TYPEALIAS_KEYWORD | STRUCT_KEYWORD | CLASS_KEYWORD | ENUM_KEYWORD | PROTOCOL_KEYWORD | VAR_KEYWORD | FUNC_KEYWORD
+import_path ::= import_path_identifier (DOT import_path_identifier)*
+import_path_identifier ::= IDENTIFIER | any_operator
+
+// ----- constant / variable -----
+constant_declaration ::= attributes? declaration_modifier* LET_KEYWORD pattern_initializer_list { pin = 3 }
+
+variable_declaration ::= attributes? declaration_modifier* VAR_KEYWORD variable_decl_tail { pin = 3 }
+
+private variable_decl_tail ::=
+    variable_name type_annotation getter_setter_keyword_block
+  | variable_name type_annotation getter_setter_block
+  | variable_name type_annotation willSet_didSet_block
+  // For `var x: T = expr { willSet }` we must not let the initializer's
+  // expression swallow the willSet/didSet block as a trailing closure.
+  | variable_name type_annotation cond_initializer willSet_didSet_block
+  | variable_name type_annotation code_block
+  | pattern_initializer_list
+
+private cond_initializer ::= EQ cond_expression
+
+variable_name ::= IDENTIFIER
+
+pattern_initializer_list ::= pattern_initializer (COMMA pattern_initializer)*
+pattern_initializer ::= pattern initializer?
+initializer ::= EQ expression
+
+getter_setter_block ::=
+    LBRACE getter_clause setter_clause? RBRACE
+  | LBRACE setter_clause getter_clause RBRACE
+
+getter_clause ::= attributes? mutation_modifier? GET_KEYWORD code_block
+setter_clause ::= attributes? mutation_modifier? SET_KEYWORD setter_name? code_block
+setter_name   ::= LPAREN IDENTIFIER RPAREN
+
+getter_setter_keyword_block ::=
+    LBRACE getter_keyword_clause setter_keyword_clause? RBRACE
+  | LBRACE setter_keyword_clause getter_keyword_clause RBRACE
+
+getter_keyword_clause ::= attributes? mutation_modifier? GET_KEYWORD
+setter_keyword_clause ::= attributes? mutation_modifier? SET_KEYWORD
+
+willSet_didSet_block ::=
+    LBRACE willSet_clause didSet_clause? RBRACE
+  | LBRACE didSet_clause willSet_clause? RBRACE
+
+willSet_clause ::= attributes? WILLSET_KEYWORD setter_name? code_block
+didSet_clause  ::= attributes? DIDSET_KEYWORD  setter_name? code_block
+
+// ----- typealias -----
+typealias_declaration ::= attributes? access_level_modifier? TYPEALIAS_KEYWORD IDENTIFIER generic_parameter_clause? EQ type { pin = 3 }
+
+// ----- function -----
+function_declaration ::= attributes? declaration_modifier* FUNC_KEYWORD function_name generic_parameter_clause? function_signature generic_where_clause? function_body? { pin = 3 }
+
+function_name ::= IDENTIFIER | any_operator
+
+function_signature ::=
+    parameter_clause (THROWS_KEYWORD | RETHROWS_KEYWORD)? function_result?
+
+function_result ::= ARROW attributes? type
+function_body   ::= code_block
+
+parameter_clause ::= LPAREN parameter_list? RPAREN { pin = 1 }
+parameter_list   ::= parameter (COMMA parameter)*
+
+parameter ::= attributes? parameter_external_name? parameter_local_name type_annotation parameter_tail?
+private parameter_external_name ::= label_identifier &parameter_local_name
+private parameter_local_name    ::= label_identifier
+// Several Swift keywords are valid as external/internal parameter labels.
+// (Most context-sensitive keywords are already lexed as IDENTIFIER by the
+// lexer + remapped on demand by SwiftParserUtil; the alternatives below
+// cover the remaining hard keywords that may still appear as labels.)
+private label_identifier ::=
+    IDENTIFIER
+  | UNDERSCORE
+  | IN_KEYWORD
+  | WHERE_KEYWORD
+  | LEFT_KEYWORD
+  | RIGHT_KEYWORD
+  | NONE_KEYWORD
+  | GET_KEYWORD
+  | SET_KEYWORD
+  | WILLSET_KEYWORD
+  | DIDSET_KEYWORD
+  | ASSOCIATIVITY_KEYWORD
+  | HIGHERTHAN_KEYWORD
+  | LOWERTHAN_KEYWORD
+  | ASSIGNMENT_KEYWORD
+private parameter_tail ::= ELLIPSIS | default_argument_clause
+default_argument_clause ::= EQ expression
+
+// ----- enum -----
+enum_declaration ::= attributes? access_level_modifier? union_style_enum
+
+union_style_enum ::=
+    INDIRECT_KEYWORD? ENUM_KEYWORD IDENTIFIER generic_parameter_clause? type_inheritance_clause? generic_where_clause?
+    LBRACE union_style_enum_member* RBRACE { pin = 2 }
+
+union_style_enum_member ::= declaration | union_style_enum_case_clause | compiler_control_statement
+union_style_enum_case_clause ::= attributes? INDIRECT_KEYWORD? CASE_KEYWORD union_style_enum_case (COMMA union_style_enum_case)*
+// Cover both associated-value union enums (`case foo(Int)`) and raw-value
+// enums (`case ok = 200`).
+union_style_enum_case ::= IDENTIFIER (tuple_type | EQ raw_value_literal)?
+private raw_value_literal ::= numeric_literal | string_literal | boolean_literal
+
+// ----- struct -----
+struct_declaration ::=
+    attributes? access_level_modifier? STRUCT_KEYWORD IDENTIFIER generic_parameter_clause?
+    type_inheritance_clause? generic_where_clause? struct_body { pin = 3 }
+
+struct_body ::= LBRACE struct_member* RBRACE { pin = 1 }
+struct_member ::= declaration | compiler_control_statement
+
+// ----- class -----
+class_declaration ::=
+    attributes? access_level_modifier? FINAL_KEYWORD? CLASS_KEYWORD IDENTIFIER generic_parameter_clause?
+    type_inheritance_clause? generic_where_clause? class_body { pin = 4 }
+
+class_body ::= LBRACE class_member* RBRACE { pin = 1 }
+class_member ::= declaration | compiler_control_statement
+
+// ----- protocol -----
+protocol_declaration ::=
+    attributes? access_level_modifier? PROTOCOL_KEYWORD IDENTIFIER
+    type_inheritance_clause? protocol_body { pin = 3 }
+
+protocol_body ::= LBRACE protocol_member* RBRACE { pin = 1 }
+
+protocol_member ::= protocol_member_declaration | compiler_control_statement
+protocol_member_declaration ::=
+    protocol_property_declaration
+  | protocol_method_declaration
+  | protocol_initializer_declaration
+  | protocol_subscript_declaration
+  | protocol_associated_type_declaration
+  | typealias_declaration
+
+protocol_property_declaration ::= attributes? declaration_modifier* VAR_KEYWORD IDENTIFIER type_annotation getter_setter_keyword_block
+protocol_method_declaration   ::= attributes? declaration_modifier* FUNC_KEYWORD function_name generic_parameter_clause? function_signature generic_where_clause?
+protocol_initializer_declaration ::= attributes? declaration_modifier* INIT_KEYWORD QUESTION? EXCL? generic_parameter_clause? parameter_clause (THROWS_KEYWORD | RETHROWS_KEYWORD)? generic_where_clause?
+protocol_subscript_declaration ::= attributes? declaration_modifier* SUBSCRIPT_KEYWORD parameter_clause ARROW attributes? type getter_setter_keyword_block
+protocol_associated_type_declaration ::= attributes? access_level_modifier? ASSOCIATEDTYPE_KEYWORD IDENTIFIER type_inheritance_clause? (EQ type)? { pin = 3 }
+
+// ----- init / deinit -----
+initializer_declaration ::= attributes? declaration_modifier* INIT_KEYWORD QUESTION? EXCL? generic_parameter_clause? parameter_clause (THROWS_KEYWORD | RETHROWS_KEYWORD)? generic_where_clause? code_block { pin = 3 }
+deinitializer_declaration ::= attributes? DEINIT_KEYWORD code_block { pin = 2 }
+
+// ----- extension -----
+extension_declaration ::= attributes? access_level_modifier? EXTENSION_KEYWORD type_identifier type_inheritance_clause? generic_where_clause? extension_body { pin = 3 }
+extension_body ::= LBRACE extension_member* RBRACE { pin = 1 }
+extension_member ::= declaration | compiler_control_statement
+
+// ----- subscript -----
+subscript_declaration ::=
+    attributes? declaration_modifier* SUBSCRIPT_KEYWORD parameter_clause ARROW attributes? type
+    (getter_setter_block | getter_setter_keyword_block | code_block) { pin = 3 }
+
+// ----- operator -----
+operator_declaration ::=
+    PREFIX_KEYWORD OPERATOR_KEYWORD any_operator
+  | POSTFIX_KEYWORD OPERATOR_KEYWORD any_operator
+  | INFIX_KEYWORD OPERATOR_KEYWORD any_operator (COLON IDENTIFIER)?
+
+precedence_group_declaration ::=
+    PRECEDENCEGROUP_KEYWORD IDENTIFIER LBRACE precedence_group_attribute* RBRACE { pin = 1 }
+
+precedence_group_attribute ::=
+    HIGHERTHAN_KEYWORD COLON precedence_group_names
+  | LOWERTHAN_KEYWORD  COLON precedence_group_names
+  | ASSIGNMENT_KEYWORD COLON boolean_literal
+  | ASSOCIATIVITY_KEYWORD COLON associativity_kind
+
+precedence_group_names ::= IDENTIFIER (COMMA IDENTIFIER)*
+associativity_kind ::= LEFT_KEYWORD | RIGHT_KEYWORD | NONE_KEYWORD
+
+// ----- modifiers -----
+declaration_modifier ::=
+    CLASS_KEYWORD
+  | CONVENIENCE_KEYWORD
+  | DYNAMIC_KEYWORD
+  | FINAL_KEYWORD
+  | INFIX_KEYWORD
+  | LAZY_KEYWORD
+  | OPTIONAL_KEYWORD
+  | OVERRIDE_KEYWORD
+  | POSTFIX_KEYWORD
+  | PREFIX_KEYWORD
+  | REQUIRED_KEYWORD
+  | STATIC_KEYWORD
+  | UNOWNED_KEYWORD unowned_modifier_arg?
+  | WEAK_KEYWORD
+  | access_level_modifier
+  | mutation_modifier
+
+private unowned_modifier_arg ::= LPAREN IDENTIFIER RPAREN
+
+access_level_modifier ::=
+    PRIVATE_KEYWORD     set_arg?
+  | FILEPRIVATE_KEYWORD set_arg?
+  | INTERNAL_KEYWORD    set_arg?
+  | PUBLIC_KEYWORD      set_arg?
+  | OPEN_KEYWORD        set_arg?
+
+private set_arg ::= LPAREN SET_KEYWORD RPAREN
+
+mutation_modifier ::= MUTATING_KEYWORD | NONMUTATING_KEYWORD
+
+// ===========================================================================
+//  Patterns
+// ===========================================================================
+
+pattern ::=
+    wildcard_pattern type_annotation?
+  | value_binding_pattern
+  | tuple_pattern
+  | enum_case_pattern
+  | optional_pattern
+  | IS_KEYWORD type
+  | identifier_pattern type_annotation?
+  | expression_pattern (AS_KEYWORD type)?
+
+wildcard_pattern  ::= UNDERSCORE
+identifier_pattern ::= IDENTIFIER
+value_binding_pattern ::= (VAR_KEYWORD | LET_KEYWORD) pattern (AS_KEYWORD type)?
+tuple_pattern ::= LPAREN (pattern (COMMA pattern)*)? RPAREN
+// Match qualified (`NetworkError.timeout`) or implicit (`.success`) enum case
+// patterns. Direct IDENTIFIER-based matcher avoids greedy backtracking through
+// type_identifier's optional `.name` suffix.
+enum_case_pattern ::= IDENTIFIER (DOT member_name)+ tuple_pattern?
+                    | DOT member_name tuple_pattern?
+
+// Context-sensitive Swift keywords are valid as enum-case / implicit-member
+// names (`.none`/`.some` on Optional, `.left` for an associativity-named case).
+private member_name ::= IDENTIFIER
+                      | NONE_KEYWORD
+                      | SOME_KEYWORD
+                      | LEFT_KEYWORD
+                      | RIGHT_KEYWORD
+                      | GET_KEYWORD
+                      | SET_KEYWORD
+optional_pattern  ::= IDENTIFIER QUESTION
+expression_pattern ::= expression
+
+// ===========================================================================
+//  Attributes
+// ===========================================================================
+
+attributes ::= attribute+
+attribute  ::= AT IDENTIFIER attribute_argument_clause?
+attribute_argument_clause ::= LPAREN balanced_token* RPAREN
+
+balanced_token ::=
+    LPAREN balanced_token* RPAREN
+  | LBRACK balanced_token* RBRACK
+  | LBRACE balanced_token* RBRACE
+  | IDENTIFIER
+  | literal
+  | any_operator
+  | PLATFORM_NAME_PLATFORM_VERSION
+  | DOT | COMMA | COLON | SEMI | EQ | AT | QUESTION | EXCL | BACKTICK | ARROW
+
+// ===========================================================================
+//  Expressions
+// ===========================================================================
+
+expression ::= try_operator? prefix_expression binary_expression*
+
+// Like `expression` but with trailing closures suppressed at the top level.
+// Used in syntactic positions where a `{ ... }` block immediately follows
+// (`if`/`guard`/`while`/`switch`/`for-in`) so the block is not greedily
+// consumed as a trailing closure to the preceding expression. Trailing
+// closures inside nested parens / brackets are still allowed via `expression`.
+cond_expression ::= try_operator? cond_prefix_expression cond_binary_expression*
+
+// Binary-expression variant that recurses into cond_prefix_expression so the
+// trailing-closure suppression propagates through the whole expression chain.
+private cond_binary_expression ::=
+    type_casting_operator
+  | conditional_operator try_operator? cond_prefix_expression
+  | EQ try_operator? cond_prefix_expression
+  | BINARY_OP try_operator? cond_prefix_expression
+  | range_operator try_operator? cond_prefix_expression
+  | comparison_operator try_operator? cond_prefix_expression
+  | range_operator
+
+try_operator ::= TRY_KEYWORD (QUESTION | EXCL)?
+
+prefix_expression ::=
+    in_out_expression
+  | PREFIX_OP postfix_expression
+  | EXCL postfix_expression             // logical not: !flag
+  | range_operator postfix_expression   // one-sided range prefix: ...5, ..<10
+  | postfix_expression
+
+private cond_prefix_expression ::=
+    in_out_expression
+  | PREFIX_OP cond_postfix_expression
+  | EXCL cond_postfix_expression
+  | range_operator cond_postfix_expression
+  | cond_postfix_expression
+
+in_out_expression ::= AMP IDENTIFIER
+
+binary_expression ::=
+    type_casting_operator
+  | conditional_operator try_operator? prefix_expression
+  | EQ try_operator? prefix_expression
+  | BINARY_OP try_operator? prefix_expression
+  | range_operator try_operator? prefix_expression
+  | comparison_operator try_operator? prefix_expression
+  | range_operator      // postfix one-sided range: 0... / 0..<
+
+private range_operator ::= ELLIPSIS | HALF_OPEN_RANGE
+private comparison_operator ::= LT | GT
+
+conditional_operator ::= QUESTION try_operator? expression COLON
+
+type_casting_operator ::=
+    IS_KEYWORD type
+  | AS_KEYWORD (QUESTION | EXCL)? type
+
+// ----- primary / postfix -----
+
+primary_expression ::=
+    literal_expression
+  | self_expression
+  | superclass_expression
+  | closure_expression
+  | parenthesized_or_tuple_expression
+  | implicit_member_expression
+  | wildcard_expression
+  | selector_expression
+  | key_path_expression
+  | IMPLICIT_PARAMETER_NAME    // $0, $1, ...
+  | IDENTIFIER generic_argument_clause?
+
+postfix_expression ::= primary_expression postfix_suffix*
+
+private postfix_suffix ::=
+    function_call_argument_clause trailing_closure?
+  | trailing_closure
+  | DOT INIT_KEYWORD (LPAREN argument_names RPAREN)?
+  | DOT SELF_KEYWORD
+  | DOT PURE_DECIMAL_DIGITS
+  | DOT IDENTIFIER generic_argument_clause? (LPAREN argument_names RPAREN)?
+  | LBRACK expression (COMMA expression)* RBRACK
+  | dynamic_type_expression_suffix
+  | POSTFIX_OP            // postfix operator
+  | optional_chain_suffix // '?.x' / '?[i]' — bare '?' must yield to ternary
+  | EXCL
+
+// Mirror of postfix_expression with no top-level trailing closures.
+private cond_postfix_expression ::= primary_expression cond_postfix_suffix*
+
+private cond_postfix_suffix ::=
+    function_call_argument_clause
+  | DOT INIT_KEYWORD (LPAREN argument_names RPAREN)?
+  | DOT SELF_KEYWORD
+  | DOT PURE_DECIMAL_DIGITS
+  | DOT IDENTIFIER generic_argument_clause? (LPAREN argument_names RPAREN)?
+  | LBRACK expression (COMMA expression)* RBRACK
+  | dynamic_type_expression_suffix
+  | POSTFIX_OP
+  | optional_chain_suffix
+  | EXCL
+
+// '?' is ambiguous: in `foo?.bar` and `foo?[i]` it's a postfix optional
+// chain, but bare `?` belongs to the ternary `? : `. This rule constrains the
+// postfix form to require a `.` or `[` to immediately follow.
+private optional_chain_suffix ::= QUESTION &(DOT | LBRACK)
+
+dynamic_type_expression_suffix ::= DOT TYPE_TYPE_KEYWORD | DOT PROTOCOL_TYPE_KEYWORD
+
+// ----- function call -----
+
+function_call_argument_clause ::= LPAREN function_call_argument_list? RPAREN
+function_call_argument_list   ::= function_call_argument (COMMA function_call_argument)*
+function_call_argument ::=
+    IDENTIFIER COLON (expression | any_operator)
+  | expression
+  | any_operator
+
+trailing_closure ::= closure_expression
+
+argument_names ::= argument_name+
+argument_name  ::= IDENTIFIER COLON
+
+// ----- literal expression -----
+
+literal_expression ::=
+    literal
+  | array_literal
+  | dictionary_literal
+  | playground_literal
+  | HASH_FILE | HASH_LINE | HASH_COLUMN | HASH_FUNCTION | HASH_DSOHANDLE
+
+array_literal ::= LBRACK (array_literal_item (COMMA array_literal_item)* COMMA?)? RBRACK
+array_literal_item ::= expression
+
+dictionary_literal ::=
+    LBRACK COLON RBRACK
+  | LBRACK dictionary_literal_item (COMMA dictionary_literal_item)* COMMA? RBRACK
+dictionary_literal_item ::= expression COLON expression
+
+playground_literal ::=
+    HASH_COLOR_LITERAL LPAREN IDENTIFIER COLON expression COMMA IDENTIFIER COLON expression COMMA IDENTIFIER COLON expression COMMA IDENTIFIER COLON expression RPAREN
+  | HASH_FILE_LITERAL  LPAREN IDENTIFIER COLON expression RPAREN
+  | HASH_IMAGE_LITERAL LPAREN IDENTIFIER COLON expression RPAREN
+
+// ----- self / super -----
+
+self_expression ::=
+    SELF_KEYWORD self_tail?
+  | SELF_TYPE_KEYWORD self_tail?
+
+private self_tail ::=
+    DOT (INIT_KEYWORD | IDENTIFIER)
+  | LBRACK expression (COMMA expression)* RBRACK
+
+superclass_expression ::=
+    SUPER_KEYWORD DOT (INIT_KEYWORD | IDENTIFIER)
+  | SUPER_KEYWORD LBRACK expression RBRACK
+
+// ----- closure -----
+
+closure_expression ::= LBRACE closure_signature? statements? RBRACE { pin = 1 }
+
+closure_signature ::=
+    capture_list (closure_param_clause)? (THROWS_KEYWORD)? function_result? IN_KEYWORD
+  | closure_param_clause (THROWS_KEYWORD)? function_result? IN_KEYWORD
+  | capture_list IN_KEYWORD
+
+closure_param_clause ::=
+    LPAREN closure_parameter_list? RPAREN
+  | IDENTIFIER (COMMA IDENTIFIER)*
+
+closure_parameter_list ::= closure_parameter (COMMA closure_parameter)*
+closure_parameter ::= IDENTIFIER type_annotation? ELLIPSIS?
+
+capture_list ::= LBRACK capture_list_item (COMMA capture_list_item)* RBRACK
+capture_list_item ::= capture_specifier? expression
+capture_specifier ::=
+    WEAK_KEYWORD
+  | UNOWNED_KEYWORD (LPAREN IDENTIFIER RPAREN)?
+
+// ----- misc primary -----
+
+implicit_member_expression ::= DOT IDENTIFIER
+wildcard_expression        ::= UNDERSCORE
+
+selector_expression ::=
+    HASH_SELECTOR LPAREN (IDENTIFIER COLON)? expression RPAREN { pin = 1 }
+key_path_expression ::= HASH_KEYPATH LPAREN expression RPAREN { pin = 1 }
+
+parenthesized_or_tuple_expression ::=
+    LPAREN RPAREN
+  | LPAREN tuple_element (COMMA tuple_element)* RPAREN
+
+tuple_element ::=
+    IDENTIFIER COLON expression
+  | expression
+
+// ===========================================================================
+//  Types
+// ===========================================================================
+
+type ::= type_atom type_suffix*
+
+private type_atom ::=
+    array_type
+  | dictionary_type
+  | function_type     // must precede tuple_type because both start with '('
+  | tuple_type
+  | opaque_type       // Swift 5.1: `some View`
+  | the_any_type
+  | the_self_type
+  | protocol_composition_type
+  | type_identifier
+
+opaque_type ::= SOME_KEYWORD type_identifier
+
+type_suffix ::=
+    QUESTION
+  | EXCL
+  | DOT TYPE_TYPE_KEYWORD
+  | DOT PROTOCOL_TYPE_KEYWORD
+
+the_any_type  ::= ANY_KEYWORD
+the_self_type ::= SELF_TYPE_KEYWORD
+
+type_annotation ::= COLON attributes? INOUT_KEYWORD? type
+
+type_identifier ::= type_name generic_argument_clause? (DOT type_identifier)?
+type_name ::= IDENTIFIER
+
+tuple_type ::= LPAREN (tuple_type_element (COMMA tuple_type_element)*)? RPAREN
+tuple_type_element ::= IDENTIFIER type_annotation | type
+
+array_type      ::= LBRACK type RBRACK
+dictionary_type ::= LBRACK type COLON type RBRACK
+
+function_type ::= attributes? function_type_arg_clause (THROWS_KEYWORD | RETHROWS_KEYWORD)? ARROW type
+function_type_arg_clause ::= LPAREN (function_type_arg (COMMA function_type_arg)* ELLIPSIS?)? RPAREN
+function_type_arg ::= attributes? INOUT_KEYWORD? type | IDENTIFIER type_annotation
+
+protocol_composition_type ::= protocol_identifier (AMP protocol_identifier)+
+protocol_identifier ::= type_identifier
+
+type_inheritance_clause ::= COLON type_inheritance_item (COMMA type_inheritance_item)*
+type_inheritance_item ::= CLASS_KEYWORD | type_identifier
+
+// ===========================================================================
+//  Literals
+// ===========================================================================
+
+// Lexer-only tokens that no parser rule references; mentioning them in this
+// dummy alternation forces Grammar-Kit to emit field declarations for them
+// in the generated SwiftTypes holder. The rule itself is never reached
+// during parsing.
+private lexer_only_tokens ::= LINE_COMMENT
+                            | BLOCK_COMMENT
+                            | INTERPOLATED_STRING_LITERAL
+                            | IMPLICIT_PARAMETER_NAME
+                            | PLATFORM_NAME_PLATFORM_VERSION
+                            | DOUBLE_DOT_EQ
+                            | OPERATOR
+
+// Any operator regardless of whitespace classification. Used in
+// position-insensitive contexts (operator declarations, function names,
+// import paths, attribute balanced tokens, function-call arg slots).
+private any_operator ::= PREFIX_OP | POSTFIX_OP | BINARY_OP | DOT_OPERATOR
+
+literal ::= numeric_literal | string_literal | boolean_literal | nil_literal
+
+numeric_literal ::= PREFIX_OP? (integer_literal | FLOATING_POINT_LITERAL)
+integer_literal ::= BINARY_LITERAL | OCTAL_LITERAL | HEXADECIMAL_LITERAL | DECIMAL_LITERAL | PURE_DECIMAL_DIGITS
+
+string_literal  ::= STATIC_STRING_LITERAL | INTERPOLATED_STRING_LITERAL
+boolean_literal ::= TRUE_KEYWORD | FALSE_KEYWORD
+nil_literal     ::= NIL_KEYWORD

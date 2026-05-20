@@ -1,0 +1,7 @@
+let empty = ""
+let simple = "hello"
+let withEscapes = "tab:\t newline:\n quote:\" backslash:\\"
+let hex = "\u{1F600}"
+let interpolated = "value = \(42)"
+let nested = "outer \(inner: "x")"
+let multi = "line1" + " " + "line2"

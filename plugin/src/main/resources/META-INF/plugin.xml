@@ -1,0 +1,8 @@
+<consulo-plugin>
+    <id>consulo.swift</id>
+    <name>Swift</name>
+    <tags>
+        <tag>custom.language</tag>
+    </tags>
+    <version>SNAPSHOT</version>
+</consulo-plugin>
