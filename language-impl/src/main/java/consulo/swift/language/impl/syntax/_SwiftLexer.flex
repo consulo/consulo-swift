@@ -128,6 +128,18 @@ INTERP_SEG         = "\\(" {INTERP_INNER}* ( "(" {INTERP_INNER}* ")" {INTERP_INN
 QUOTED_ITEM        = {ESC_CHAR} | {INTERP_SEG} | [^\"\n\r\\]
 STATIC_STR         = "\"" {QUOTED_ITEM}* "\""
 
+// Multi-line string literal (Swift 4.0+): triple-quoted, may contain raw newlines.
+// Match the minimal content between triple quotes, lazily.
+MULTILINE_STR      = "\"\"\"" ([^\"] | "\""[^\"] | "\"\""[^\"])* "\"\"\""
+
+// Raw string literal (Swift 5.0+): one or more '#' on each side. Inside the
+// string, backslash escapes only fire when followed by the same number of '#'.
+// We treat the whole `#"..."#` block as a single STATIC_STRING_LITERAL.
+RAW_STR_1H         = "#\""  ([^\"] | "\""[^#])*       "\"#"
+RAW_STR_2H         = "##\"" ([^\"] | "\"" [^#] | "\"#" [^#])* "\"##"
+RAW_STR_3H         = "###\"" ([^\"] | "\"" [^#] | "\"#" [^#] | "\"##" [^#])* "\"###"
+RAW_MULTI_1H       = "#\"\"\"" ([^\"] | "\""[^\"] | "\"\""[^\"] | "\"\"\""[^#])* "\"\"\"#"
+
 // Swift operator-head ASCII portion. Defined as an alternation to avoid
 // JFlex character-class parsing quirks around '?'.
 OP_CHAR            = ("/" | "=" | "-" | "+" | "!" | "*" | "%" | "&" | "|" | "<" | ">" | "^" | "~" | "?")
@@ -264,8 +276,16 @@ OP_CHAR            = ("/" | "=" | "-" | "+" | "!" | "*" | "%" | "&" | "|" | "<" 
   "!"                      { return term(SwiftTypes.EXCL); }
   "&"                      { return term(SwiftTypes.AMP); }
   "_"                      { return term(SwiftTypes.UNDERSCORE); }
+  // Key-path expression prefix `\Foo.bar` / `\.bar` (Swift 4.0+). Outside
+  // string literals this is the only legal use of bare backslash.
+  "\\"                     { return term(SwiftTypes.BACKSLASH); }
 
-  // ---- Literals ----
+  // ---- String literals (longer forms first for longest-match) ----
+  {RAW_MULTI_1H}           { return term(SwiftTypes.STATIC_STRING_LITERAL); }
+  {MULTILINE_STR}          { return term(SwiftTypes.STATIC_STRING_LITERAL); }
+  {RAW_STR_3H}             { return term(SwiftTypes.STATIC_STRING_LITERAL); }
+  {RAW_STR_2H}             { return term(SwiftTypes.STATIC_STRING_LITERAL); }
+  {RAW_STR_1H}             { return term(SwiftTypes.STATIC_STRING_LITERAL); }
   {STATIC_STR}             { return term(SwiftTypes.STATIC_STRING_LITERAL); }
   {FLOAT_LIT}              { return term(SwiftTypes.FLOATING_POINT_LITERAL); }
   {BIN_LIT}                { return term(SwiftTypes.BINARY_LITERAL); }

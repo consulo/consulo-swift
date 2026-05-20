@@ -75,6 +75,7 @@ public class SwiftParsingTest extends SimpleParsingTest<Object> {
     @Test public void testRangeOperators(Context context) throws Exception { doTest(context, null); }
     @Test public void testSettingsView(Context context) throws Exception { doTest(context, null); }
     @Test public void testSomeContextual(Context context) throws Exception { doTest(context, null); }
+    @Test public void testModernSwift(Context context) throws Exception { doTest(context, null); }
 
     @Nonnull
     @Override

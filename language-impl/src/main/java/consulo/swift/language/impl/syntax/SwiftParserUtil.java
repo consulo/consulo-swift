@@ -45,8 +45,24 @@ public class SwiftParserUtil extends GeneratedParserUtilBase {
     private static final Set<IElementType> CONTEXTUAL_KEYWORD_SET = new HashSet<>();
 
     static {
-        // Type-position keyword (Swift 5.1+).
-        register(SwiftTypes.SOME_KEYWORD, "some");
+        // Type-position keywords.
+        register(SwiftTypes.SOME_KEYWORD,     "some"); // Swift 5.1+
+        register(SwiftTypes.ANY_TYPE_KEYWORD, "any");  // Swift 5.6+ (existential)
+
+        // Concurrency (Swift 5.5+).
+        register(SwiftTypes.ASYNC_KEYWORD,       "async");
+        register(SwiftTypes.AWAIT_KEYWORD,       "await");
+        register(SwiftTypes.ACTOR_KEYWORD,       "actor");
+        register(SwiftTypes.NONISOLATED_KEYWORD, "nonisolated");
+        register(SwiftTypes.ISOLATED_KEYWORD,    "isolated");
+
+        // Ownership (Swift 5.9+).
+        register(SwiftTypes.BORROWING_KEYWORD, "borrowing");
+        register(SwiftTypes.CONSUMING_KEYWORD, "consuming");
+
+        // Misc modern declarations.
+        register(SwiftTypes.DISTRIBUTED_KEYWORD, "distributed"); // Swift 5.7+
+        register(SwiftTypes.PACKAGE_KEYWORD,     "package");     // Swift 5.9+
 
         // Declaration modifiers.
         register(SwiftTypes.FINAL_KEYWORD,       "final");
