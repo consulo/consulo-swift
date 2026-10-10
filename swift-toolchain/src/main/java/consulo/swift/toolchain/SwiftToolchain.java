@@ -23,6 +23,7 @@ import consulo.process.util.CapturingProcessUtil;
 import consulo.process.util.ProcessOutput;
 import org.jspecify.annotations.Nullable;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,6 +50,8 @@ public final class SwiftToolchain {
     private static final Pattern VERSION_PATTERN = Pattern.compile("Swift version (\\S+)");
     private static final String ASSERTS_SUFFIX = "+Asserts";
     private static final String SDKROOT = "SDKROOT";
+    private static final String DEVELOPER_DIR = "DEVELOPER_DIR";
+    private static final String NO_COLOR = "NO_COLOR";
     private static final int VERSION_TIMEOUT_MS = 10_000;
 
     private final Platform myPlatform;
@@ -165,6 +168,14 @@ public final class SwiftToolchain {
         Map<String, String> parent = myPlatform.os().environmentVariables();
         prependPath(environment, parent, getPathDirectories());
 
+        if (!myPlatform.os().isWindows() && !myPlatform.os().isMac()
+            && !environment.containsKey(DEVELOPER_DIR) && parent.get(DEVELOPER_DIR) == null) {
+            Path developerDirectory = findDeveloperDirectory();
+            if (developerDirectory != null) {
+                environment.put(DEVELOPER_DIR, developerDirectory.toString());
+            }
+        }
+
         if (myPlatform.os().isWindows()) {
             String sdkRootName = findVariableName(parent, SDKROOT);
             if (!environment.containsKey(sdkRootName) && parent.get(sdkRootName) == null) {
@@ -207,6 +218,10 @@ public final class SwiftToolchain {
         environment.put(pathName, builder.toString());
     }
 
+    /**
+     * {@code swift ...} with the environment of the toolchain. Output is not colored - the IDE reads it, and swift-build
+     * colors diagnostics even when its output is not a terminal.
+     */
     public GeneralCommandLine createSwiftCommandLine(@Nullable Path workDirectory, List<String> arguments) {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.withExecutablePath(getSwiftExecutable());
@@ -214,7 +229,42 @@ public final class SwiftToolchain {
         commandLine.addParameters(arguments);
         commandLine.withPlatform(myPlatform);
         configureEnvironment(commandLine.getEnvironment());
+        commandLine.getEnvironment().putIfAbsent(NO_COLOR, "1");
         return commandLine;
+    }
+
+    /**
+     * swift-build, the default build system of SwiftPM, finds the toolchain in {@code $DEVELOPER_DIR/usr/bin} and
+     * otherwise searches the system, where a distribution package may have linked only {@code swift} and {@code swiftc}
+     * (e.g. {@code /usr/bin} of Arch, whose toolchain is in {@code /usr/lib/swift}) - and then fails to find the rest of
+     * the tools ({@code swift-autolink-extract}, ...).
+     *
+     * @return the directory whose {@code usr} is the home: its parent for the usual {@code <toolchain>/usr} homes, a
+     * directory with a {@code usr} link to the home otherwise
+     */
+    private @Nullable Path findDeveloperDirectory() {
+        Path name = myHome.getFileName();
+        if (name != null && "usr".equals(name.toString())) {
+            return myHome.getParent();
+        }
+        try {
+            String user = myPlatform.user().name();
+            String temp = myPlatform.jvm().getRuntimeProperty("java.io.tmpdir");
+            Path directory = Path.of(temp == null ? "/tmp" : temp)
+                .resolve("consulo-swift-" + user)
+                .resolve("developer-" + Integer.toHexString(myHome.toAbsolutePath().normalize().hashCode()));
+            Path usr = directory.resolve("usr");
+            if (Files.isSymbolicLink(usr) && myHome.equals(Files.readSymbolicLink(usr))) {
+                return directory;
+            }
+            Files.createDirectories(directory);
+            Files.deleteIfExists(usr);
+            Files.createSymbolicLink(usr, myHome);
+            return directory;
+        }
+        catch (IOException | UnsupportedOperationException | SecurityException e) {
+            return null;
+        }
     }
 
     /**

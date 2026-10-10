@@ -242,7 +242,7 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
         Map<String, String> variables = new LinkedHashMap<>(myProgramSettings.getEnvs());
         launch.toolchain().configureProgramEnvironment(variables);
         return NativeDebugTarget.launch(testBinary, arguments, launch.workingDirectory(), variables, null)
-            .withSetup(new SwiftDebuggerSetup(launch.toolchain()));
+            .withSetup(SwiftDebuggerSetup.create(getProject(), launch.toolchain()));
     }
 
     private static @Nullable Path findTestBinary(Path binPath) throws ExecutionException {

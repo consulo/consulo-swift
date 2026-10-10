@@ -17,13 +17,17 @@
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Swift Package Manager as an external system: importing {@code Package.swift}, auto-reload, package tasks.
+ * Swift Package Manager as an external system: importing {@code Package.swift}, auto-reload, package tasks, and the
+ * "Swift Package" new project/module wizard.
  */
 @NullMarked
 module consulo.swift.packageManager {
     requires transitive consulo.swift.toolchain;
     requires transitive consulo.external.system.api;
     requires consulo.module.creation.api;
+    requires consulo.module.ui.api;
+    requires consulo.project.ui.api;
+    requires consulo.file.editor.api;
     requires com.google.gson;
 
     exports consulo.swift.packageManager;
@@ -31,9 +35,11 @@ module consulo.swift.packageManager {
     exports consulo.swift.packageManager.importing;
     exports consulo.swift.packageManager.localize;
     exports consulo.swift.packageManager.module.extension;
+    exports consulo.swift.packageManager.newProject;
     exports consulo.swift.packageManager.project;
     exports consulo.swift.packageManager.setting;
     exports consulo.swift.packageManager.task;
+    exports consulo.swift.packageManager.ui;
 
     opens consulo.swift.packageManager.setting to consulo.util.xml.serializer;
 }

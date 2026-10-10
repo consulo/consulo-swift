@@ -165,7 +165,7 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
                 variables,
                 null
             )
-            .withSetup(new SwiftDebuggerSetup(launch.toolchain()));
+            .withSetup(SwiftDebuggerSetup.create(getProject(), launch.toolchain()));
     }
 
     /**

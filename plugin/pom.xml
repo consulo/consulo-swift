@@ -34,6 +34,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <dependencies>
+                        <dependency>consulo.dap</dependency>
                         <dependency>consulo.nativeDev</dependency>
                     </dependencies>
                     <packaging>

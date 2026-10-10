@@ -38,7 +38,10 @@ public class SwiftSymbolNameTest {
     public void testStaticAndGenerics() {
         assertEquals(new SwiftSymbolName("Main", "main", true), SwiftSymbolName.parse("static Main.main()"));
         assertEquals(new SwiftSymbolName("Box", "area", true), SwiftSymbolName.parse("Box<A>.area()"));
-        assertEquals(new SwiftSymbolName("Box", "map", true), SwiftSymbolName.parse("generic specialization <Swift.Int> of Box<A>.map<B>(_:)"));
+        assertEquals(
+            new SwiftSymbolName("Box", "map", true),
+            SwiftSymbolName.parse("generic specialization <Swift.Int> of Box<A>.map<B>(_:)")
+        );
     }
 
     @Test

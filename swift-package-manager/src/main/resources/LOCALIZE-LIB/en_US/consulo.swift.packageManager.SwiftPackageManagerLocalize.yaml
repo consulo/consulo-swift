@@ -34,3 +34,21 @@ settings.toolchain.most.recent:
   text: "<Most recent>"
 settings.build.arguments.label:
   text: "Additional build arguments:"
+new.project.group:
+  text: "Swift"
+new.project.package:
+  text: "Swift Package"
+new.project.type.label:
+  text: "Package type:"
+new.project.creating:
+  text: "Creating Swift package..."
+new.project.failed:
+  text: "Cannot create the Swift package: {0}"
+package.type.executable:
+  text: "Executable"
+package.type.library:
+  text: "Library"
+package.type.tool:
+  text: "Command-line tool (Swift Argument Parser)"
+package.type.empty:
+  text: "Empty"

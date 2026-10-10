@@ -6,6 +6,10 @@ compiler.no.package:
   text: "Module ''{0}'' is not a Swift package - there is no Package.swift in its content roots"
 compiler.cannot.run:
   text: "Cannot run ''{0}'': {1}"
+compiler.failed:
+  text: "''{0}'' failed with exit code {1}"
+compiler.swift.build.toolchain.hint:
+  text: "The default build system of SwiftPM (swift-build) did not find the tools of the toolchain - this happens with some distribution packages. Add --build-system native to the additional build arguments in the Swift Package Manager settings of the package."
 compiler.bin.path.failed:
   text: "Cannot find the build directory of the package: ''swift build --show-bin-path'' failed"
 run.configuration.name:
@@ -48,3 +52,11 @@ test.producer.target:
   text: "Tests in ''{0}''"
 test.producer.file:
   text: "Tests in {0}"
+notification.group:
+  text: "Swift"
+debugger.toolchain.lldb.title:
+  text: "The LLDB of the Swift toolchain cannot start"
+debugger.toolchain.lldb.broken:
+  text: "{0}: {1}. No other lldb-dap was found - choose a debugger in the run configuration."
+debugger.toolchain.lldb.broken.fallback:
+  text: "{0}: {1}. Debugging with {2} instead - it stops at breakpoints and steps, but shows no Swift values."

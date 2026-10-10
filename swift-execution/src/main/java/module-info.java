@@ -28,6 +28,7 @@ module consulo.swift.execution {
     requires consulo.execution.api;
     requires consulo.execution.debug.api;
     requires consulo.execution.test.sm.api;
+    requires consulo.project.ui.api;
     requires consulo.execution.profiler.api;
     requires consulo.nativeDev.debugger.api;
     requires consulo.nativeDev.debugger.dap;

@@ -53,6 +53,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,6 +73,14 @@ public class SwiftCompilerRunner implements CompilerRunner {
      * {@code /path/File.swift:12:5: error: message} - the format of swiftc and clang; the path may hold {@code :} on Windows.
      */
     private static final Pattern DIAGNOSTIC = Pattern.compile("^(.+?):(\\d+):(\\d+): (error|warning|note): (.*)$");
+    private static final String ERROR_PREFIX = "error: ";
+    private static final Pattern ANSI_ESCAPE = Pattern.compile("\u001B\\[[0-9;]*[A-Za-z]");
+    /**
+     * What swift-build - the default build system - reports when it does not understand the layout of the toolchain
+     * (e.g. distribution packages that put the toolchain into {@code /usr/lib/swift}).
+     */
+    private static final String SWIFT_BUILD_TOOLCHAIN_NOT_FOUND = "in any registered toolchain";
+    private static final String SWIFT_BUILD_TOOL_NOT_FOUND = "error: unable to spawn process";
 
     private final Project myProject;
     private final ModuleExtensionHelper myModuleExtensionHelper;
@@ -203,6 +212,7 @@ public class SwiftCompilerRunner implements CompilerRunner {
         }
 
         AtomicInteger exitCode = new AtomicInteger(-1);
+        AtomicBoolean toolchainNotFound = new AtomicBoolean();
         // swift build repeats every diagnostic of a compile job in its summary
         Set<String> reported = ConcurrentHashMap.newKeySet();
         processHandler.addProcessListener(new ProcessListener() {
@@ -214,6 +224,9 @@ public class SwiftCompilerRunner implements CompilerRunner {
                 String text = event.getText();
                 buildProgress.output(text, outputType == ProcessOutputTypes.STDOUT);
                 report(text, reported, buildProgress);
+                if (text.contains(SWIFT_BUILD_TOOLCHAIN_NOT_FOUND) || text.contains(SWIFT_BUILD_TOOL_NOT_FOUND)) {
+                    toolchainNotFound.set(true);
+                }
             }
 
             @Override
@@ -229,11 +242,29 @@ public class SwiftCompilerRunner implements CompilerRunner {
                 return false;
             }
         }
-        return exitCode.get() == 0;
+
+        int code = exitCode.get();
+        if (code == 0) {
+            return true;
+        }
+        // the compile driver goes by the errors of the context - without one the launch would go on
+        context.newError(SwiftExecutionLocalize.compilerFailed(presentation, code)).add();
+        if (toolchainNotFound.get()) {
+            context.newInfo(SwiftExecutionLocalize.compilerSwiftBuildToolchainHint()).add();
+        }
+        return false;
     }
 
     private static void report(String text, Set<String> reported, BuildProgress<BuildProgressDescriptor> buildProgress) {
-        for (String line : text.split("\\R")) {
+        for (String coloredLine : text.split("\\R")) {
+            // NO_COLOR is set, but a build system may still color its diagnostics
+            String line = ANSI_ESCAPE.matcher(coloredLine).replaceAll("");
+            if (line.startsWith(ERROR_PREFIX) && reported.add(line)) {
+                // SwiftPM's own errors - of the build, not of a source file
+                LocalizeValue message = LocalizeValue.of(line.substring(ERROR_PREFIX.length()));
+                buildProgress.message(message, message, MessageEvent.Kind.ERROR, null);
+                continue;
+            }
             Matcher matcher = DIAGNOSTIC.matcher(line);
             if (!matcher.matches() || !reported.add(line)) {
                 continue;
