@@ -1,0 +1,26 @@
+{
+  "identity": "demo",
+  "name": "Demo",
+  "url": "@PACKAGE@",
+  "version": "unspecified",
+  "path": "@PACKAGE@",
+  "traits": [
+    "default"
+  ],
+  "dependencies": [
+    {
+      "identity": "helper",
+      "name": "Helper",
+      "url": "@HELPER@",
+      "version": "unspecified",
+      "path": "@HELPER@",
+      "traits": [
+        "default"
+      ],
+      "dependencies": [
+
+      ]
+    }
+  ]
+}
+

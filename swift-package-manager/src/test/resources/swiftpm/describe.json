@@ -1,0 +1,86 @@
+{
+  "dependencies" : [
+    {
+      "identity" : "helper",
+      "path" : "@HELPER@",
+      "type" : "fileSystem"
+    }
+  ],
+  "manifest_display_name" : "Demo",
+  "name" : "Demo",
+  "path" : "@PACKAGE@",
+  "platforms" : [
+
+  ],
+  "products" : [
+    {
+      "name" : "DemoLib",
+      "targets" : [
+        "DemoLib"
+      ],
+      "type" : {
+        "library" : [
+          "automatic"
+        ]
+      }
+    },
+    {
+      "name" : "Demo",
+      "targets" : [
+        "Demo"
+      ],
+      "type" : {
+        "executable" : null
+      }
+    }
+  ],
+  "targets" : [
+    {
+      "c99name" : "DemoTests",
+      "module_type" : "SwiftTarget",
+      "name" : "DemoTests",
+      "path" : "Tests/DemoTests",
+      "sources" : [
+        "T.swift"
+      ],
+      "target_dependencies" : [
+        "DemoLib"
+      ],
+      "type" : "test"
+    },
+    {
+      "c99name" : "DemoLib",
+      "module_type" : "SwiftTarget",
+      "name" : "DemoLib",
+      "path" : "Sources/DemoLib",
+      "product_dependencies" : [
+        "Helper"
+      ],
+      "product_memberships" : [
+        "DemoLib",
+        "Demo"
+      ],
+      "sources" : [
+        "Lib.swift"
+      ],
+      "type" : "library"
+    },
+    {
+      "c99name" : "Demo",
+      "module_type" : "SwiftTarget",
+      "name" : "Demo",
+      "path" : "Sources/Demo",
+      "product_memberships" : [
+        "Demo"
+      ],
+      "sources" : [
+        "Demo.swift"
+      ],
+      "target_dependencies" : [
+        "DemoLib"
+      ],
+      "type" : "executable"
+    }
+  ],
+  "tools_version" : "5.9"
+}

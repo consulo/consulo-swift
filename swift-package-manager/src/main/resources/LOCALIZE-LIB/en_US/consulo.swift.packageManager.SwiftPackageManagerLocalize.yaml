@@ -1,0 +1,36 @@
+system.name:
+  text: "Swift Package Manager"
+task.build.description:
+  text: "Build all products of the package"
+task.test.description:
+  text: "Build and run the tests of the package"
+task.clean.description:
+  text: "Delete the build artifacts of the package"
+task.resolve.description:
+  text: "Resolve the dependencies of the package"
+task.update.description:
+  text: "Update the dependencies of the package to their latest allowed versions"
+status.resolving:
+  text: "Resolving package dependencies..."
+status.reading:
+  text: "Reading package structure..."
+error.no.manifest:
+  text: "There is no Package.swift in ''{0}''"
+error.no.toolchain:
+  text: "No Swift toolchain is configured. Add one in Settings | Platform | SDKs, or select one in the Swift Package Manager settings of the project."
+error.command.failed:
+  text: "''{0}'' failed with exit code {1}"
+error.cannot.run:
+  text: "Cannot run ''{0}'': {1}"
+error.cancelled:
+  text: "''{0}'' was cancelled"
+error.unknown.task:
+  text: "Unknown Swift Package Manager task ''{0}''"
+error.bad.output:
+  text: "Cannot read the output of ''{0}'': {1}"
+settings.toolchain.label:
+  text: "Toolchain:"
+settings.toolchain.most.recent:
+  text: "<Most recent>"
+settings.build.arguments.label:
+  text: "Additional build arguments:"
