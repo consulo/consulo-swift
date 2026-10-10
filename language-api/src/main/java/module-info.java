@@ -19,6 +19,7 @@ module consulo.swift.language.api {
 
     exports consulo.swift.language;
     exports consulo.swift.language.psi;
+    exports consulo.swift.language.psi.stub;
 
     exports consulo.swift.language.icon;
     exports consulo.swift.language.localize;

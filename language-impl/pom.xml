@@ -80,5 +80,19 @@
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!--
+              Test-scope only: the stdlib-decompile-then-PSI-parse passive
+              test in this module needs to call into the bitcode reader
+              and printer at runtime (rather than copying a pre-baked
+              snapshot). The decompiler module itself depends on bitcode;
+              this lets the IDE-side parser exercise the same pipeline
+              end-to-end without going through a third module.
+            -->
+            <groupId>${project.groupId}</groupId>
+            <artifactId>consulo.swift.bitcode</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

@@ -17,6 +17,7 @@
 package consulo.swift.language.impl.syntax;
 
 import consulo.language.ast.IElementType;
+import consulo.language.ast.TokenType;
 import consulo.language.impl.parser.GeneratedParserUtilBase;
 import consulo.language.parser.PsiBuilder;
 import consulo.swift.language.psi.SwiftTypes;
@@ -139,7 +140,128 @@ public class SwiftParserUtil extends GeneratedParserUtilBase {
             return false;
         }
 
+        // Compose GT-prefixed compound operators contextually. The lexer
+        // emits {@code >} as a primitive {@link SwiftTypes#GT} (so we can
+        // close nested generics one {@code >} at a time), which means
+        // {@code >=}, {@code >>}, {@code >>=}, {@code >?}, {@code >!}
+        // now arrive as two or three separate raw tokens. The grammar
+        // expects them as {@link SwiftTypes#BINARY_OP},
+        // {@link SwiftTypes#POSTFIX_OP}, or {@link SwiftTypes#PREFIX_OP}
+        // depending on context (operator declarations, prefix/postfix
+        // operators in expressions, custom operators). Reconstruct one
+        // synthetic element from the consecutive primitives via
+        // {@link PsiBuilder.Marker#collapse} — exactly the trick the
+        // {@code consulo-java} ExpressionParser uses for the same problem.
+        if (token == SwiftTypes.BINARY_OP
+            || token == SwiftTypes.POSTFIX_OP
+            || token == SwiftTypes.PREFIX_OP) {
+            int width = gtCompoundWidthFor(b, token);
+            if (width > 0) {
+                PsiBuilder.Marker mark = b.mark();
+                for (int i = 0; i < width; i++) {
+                    b.advanceLexer();
+                }
+                mark.collapse(token);
+                return true;
+            }
+        }
+
         return GeneratedParserUtilBase.consumeToken(b, token);
+    }
+
+    /**
+     * Width (in raw tokens) of a GT-prefixed compound operator at the
+     * current position, or {@code 0} if the current token isn't the start
+     * of one. Uses {@link PsiBuilder#rawLookup(int)} so the check doesn't
+     * skip whitespace — {@code > =} (with a space) is two separate ops,
+     * NOT a single {@code >=} operator, per Swift's whitespace rules.
+     *
+     * <p>Patterns recognised:
+     * <ul>
+     *   <li>{@code GT GT}            → 2 ({@code >>}, right shift)</li>
+     *   <li>{@code GT EQ}            → 2 ({@code >=}, greater-or-equal)</li>
+     *   <li>{@code GT QUESTION}      → 2 ({@code >?}, custom op / IUO comparator)</li>
+     *   <li>{@code GT EXCL}          → 2 ({@code >!}, custom op)</li>
+     *   <li>{@code GT GT EQ}         → 3 ({@code >>=}, shift-assign)</li>
+     *   <li>{@code GT GT GT}         → 3 ({@code >>>}, custom triple-shift)</li>
+     *   <li>{@code GT GT GT EQ}      → 4 ({@code >>>=})</li>
+     * </ul>
+     *
+     * <p>Anything else (including bare {@code GT} followed by an identifier
+     * or whitespace) returns 0 so the caller falls through to standard
+     * single-token handling — that's how plain {@code Foo<T>} closes the
+     * generic with just one consumed {@code GT}.
+     */
+    private static int gtCompoundWidth(PsiBuilder b) {
+        if (b.getTokenType() != SwiftTypes.GT) {
+            return 0;
+        }
+        IElementType next = b.rawLookup(1);
+        if (next == SwiftTypes.GT) {
+            IElementType third = b.rawLookup(2);
+            if (third == SwiftTypes.GT) {
+                return b.rawLookup(3) == SwiftTypes.EQ ? 4 : 3;
+            }
+            if (third == SwiftTypes.EQ) {
+                return 3;
+            }
+            return 2;
+        }
+        if (next == SwiftTypes.EQ || next == SwiftTypes.QUESTION || next == SwiftTypes.EXCL) {
+            return 2;
+        }
+        return 0;
+    }
+
+    /**
+     * Like {@link #gtCompoundWidth} but ALSO classifies the compound by
+     * whitespace context the way the lexer's {@code classifyOp()} does, and
+     * returns {@code 0} unless the classification matches the operator
+     * category the parser is currently asking for.
+     *
+     * <p>The trick is necessary because the grammar tries each of
+     * {@code PREFIX_OP / POSTFIX_OP / BINARY_OP} in turn — without this
+     * classification a compound like {@code >=} in {@code a >= b} (which
+     * Swift classifies as BINARY) would be greedily eaten by the FIRST
+     * alternative the grammar tries ({@code POSTFIX_OP}), leaving the
+     * parser stuck. The lexer wouldn't make that mistake — and we shouldn't
+     * either when re-composing.
+     *
+     * <p>Swift's WS-sensitive classification (from {@code classifyOp}):
+     * <ul>
+     *   <li>{@code ws ws} or {@code -- --}                  → BINARY_OP</li>
+     *   <li>{@code ws -- } (WS left, no WS right)            → PREFIX_OP</li>
+     *   <li>{@code -- ws} (no WS left, WS right)            → POSTFIX_OP</li>
+     * </ul>
+     */
+    private static int gtCompoundWidthFor(PsiBuilder b, IElementType requested) {
+        int width = gtCompoundWidth(b);
+        if (width == 0) {
+            return 0;
+        }
+        boolean wsLeft  = isWhitespaceOrStart(b.rawLookup(-1));
+        boolean wsRight = isWhitespaceOrEnd(b.rawLookup(width));
+        IElementType classified;
+        if (wsLeft == wsRight) {
+            classified = SwiftTypes.BINARY_OP;
+        }
+        else if (wsLeft) {
+            classified = SwiftTypes.PREFIX_OP;
+        }
+        else {
+            classified = SwiftTypes.POSTFIX_OP;
+        }
+        return requested == classified ? width : 0;
+    }
+
+    private static boolean isWhitespaceOrStart(IElementType t) {
+        // `null` from rawLookup(-1) at file start counts as WS.
+        return t == null || t == TokenType.WHITE_SPACE;
+    }
+
+    private static boolean isWhitespaceOrEnd(IElementType t) {
+        // `null` from rawLookup past EOF counts as WS.
+        return t == null || t == TokenType.WHITE_SPACE;
     }
 
     /**
@@ -174,6 +296,15 @@ public class SwiftParserUtil extends GeneratedParserUtilBase {
         if (token == SwiftTypes.IDENTIFIER) {
             IElementType current = b.getTokenType();
             return current == SwiftTypes.IDENTIFIER || CONTEXTUAL_KEYWORD_SET.contains(current);
+        }
+        // When asked for an operator category, also accept the start of a
+        // GT-prefixed compound (>=, >>, >>=, >?, >!, >>>=) AS LONG AS the
+        // compound's whitespace classification matches the requested
+        // category. consumeToken composes them via Marker.collapse.
+        if ((token == SwiftTypes.BINARY_OP
+            || token == SwiftTypes.POSTFIX_OP
+            || token == SwiftTypes.PREFIX_OP) && gtCompoundWidthFor(b, token) > 0) {
+            return true;
         }
         return GeneratedParserUtilBase.nextTokenIs(b, token);
     }

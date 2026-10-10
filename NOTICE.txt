@@ -1,0 +1,29 @@
+consulo-swift
+Copyright 2013-2026 consulo.io
+
+This product includes software developed by consulo.io and contributors.
+
+The product is licensed under Apache License, Version 2.0
+(see the LICENSE file or http://www.apache.org/licenses/LICENSE-2.0).
+
+================================================================================
+Third-party components
+================================================================================
+
+This product bundles portions of the following MIT-licensed software:
+
+  llvm-bcj  (LLVM bitstream reader for Java)
+  Copyright (c) 2016 The University of Manchester
+  https://github.com/beehive-lab/llvm-bcj
+  Licensed under the MIT License.
+
+  Vendored location in this repository:
+    swift-bitcode/src/main/java/uk/ac/man/cs/llvm/bc/
+
+  The original package path and per-file copyright headers are preserved.
+  Only the generic bitstream-reader portion of llvm-bcj (the `bc/` package)
+  is included. The LLVM-IR-specific decoder (`ir/`) is not used.
+
+  The MIT license text accompanies the vendored sources at:
+    swift-bitcode/src/main/java/uk/ac/man/cs/llvm/bc/LICENSE.txt
+    swift-bitcode/THIRD-PARTY-LICENSES/llvm-bcj-LICENSE.txt

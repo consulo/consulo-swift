@@ -17,9 +17,11 @@
 module consulo.swift.language.editor.impl {
     requires consulo.language.api;
     requires consulo.language.editor.api;
+    requires consulo.ide.api;
 
     requires consulo.swift.language.api;
     requires consulo.swift.language.impl;
 
     exports consulo.swift.language.editor.impl.highlighting;
+    exports consulo.swift.language.editor.impl.navigation;
 }

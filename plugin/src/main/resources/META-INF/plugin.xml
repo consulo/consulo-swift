@@ -5,4 +5,5 @@
         <tag>custom.language</tag>
     </tags>
     <version>SNAPSHOT</version>
+    <depends>consulo.nativeDev</depends>
 </consulo-plugin>

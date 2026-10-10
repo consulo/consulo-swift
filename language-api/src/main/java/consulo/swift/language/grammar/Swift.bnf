@@ -41,8 +41,13 @@
   // annotator to apply keyword highlighting after parser remap).
   tokenTypeFactory       = "consulo.swift.language.SwiftTokenTypeFactory.getTokenType"
 
-  implements("statement|declaration|expression|pattern|type|attribute|condition")
+  implements("statement|expression|pattern|type|attribute|condition")
       = "consulo.swift.language.psi.SwiftElement"
+  // Declarations are stub-based (one stub class for all, see SwiftDeclarationStub) and named.
+  implements("declaration") = "consulo.swift.language.psi.SwiftNamedElement"
+  // Every declaration has a stub element type (StubBasedPsiElementBase requires one); which of them get stubs and
+  // indexes is decided by SwiftStubElementTypeFactory - keep SwiftStubElementTypes in sync with it.
+  elementTypeFactory(".*_declaration") = "consulo.swift.language.psi.stub.SwiftStubElementTypeFactory.create"
   extends(".*_statement")   = statement
   extends(".*_declaration") = declaration
   extends(".*_expression")  = expression
@@ -433,6 +438,10 @@ declaration ::=
   | precedence_group_declaration
   | constant_declaration
   | variable_declaration
+  {
+    stubClass = "consulo.swift.language.psi.stub.SwiftDeclarationStub"
+    extends = "consulo.swift.language.impl.psi.SwiftStubbedElementImpl<?>"
+  }
 
 declarations ::= declaration+
 

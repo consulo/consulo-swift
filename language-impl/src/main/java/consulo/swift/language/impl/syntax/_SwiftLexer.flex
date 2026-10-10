@@ -35,6 +35,14 @@ import consulo.swift.language.psi.SwiftTypes;
 %{
   // Block-comment nesting state.
   private int blockCommentDepth = 0;
+  // Start offset of the OUTERMOST {@code /*} for the comment currently being
+  // scanned. We need this so the BLOCK_COMMENT token we emit at the closing
+  // {@code */} spans the WHOLE comment text, not just the closing two
+  // characters. Without it the lexer emits a "discontinuous token stream"
+  // (every byte must belong to some token), which Consulo's
+  // {@code ValidatingLexerWrapper} rejects in the editor with a
+  // PluginException.
+  private int blockCommentStart = -1;
 
   // Whitespace-sensitive operator classification (Swift lexical-structure rules).
   // "leftHasWS" is true iff the character to the left of the *next* token is
@@ -142,14 +150,26 @@ RAW_MULTI_1H       = "#\"\"\"" ([^\"] | "\""[^\"] | "\"\""[^\"] | "\"\"\""[^#])*
 
 // Swift operator-head ASCII portion. Defined as an alternation to avoid
 // JFlex character-class parsing quirks around '?'.
-OP_CHAR            = ("/" | "=" | "-" | "+" | "!" | "*" | "%" | "&" | "|" | "<" | ">" | "^" | "~" | "?")
+//
+// {@code >} is deliberately excluded — it MUST emit as a primitive
+// single-char {@code GT} token so the parser can decide contextually
+// whether {@code Foo<Bar<X>>} is closing two generics (consume two
+// separate {@code GT}s) or {@code a >> b} is a right-shift (compose
+// {@code GT} + {@code GT} into one synthetic operator via
+// {@code rawLookup} + {@code Marker.collapse} at parse time). Same
+// pattern IntelliJ's Java plugin uses (see
+// {@code com.intellij.java.language.impl.parser.ExpressionParser#getGtTokenType}).
+// Every other operator-char stays here, so {@code <=}, {@code <<},
+// {@code ==}, {@code !=}, {@code ?.}, {@code ??}, etc. continue to lex
+// as single tokens — they're not ambiguous with anything.
+OP_CHAR            = ("/" | "=" | "-" | "+" | "!" | "*" | "%" | "&" | "|" | "<" | "^" | "~" | "?")
 
 %%
 
 <YYINITIAL> {
   {WHITE_SPACE}            { leftHasWS = true; return TokenType.WHITE_SPACE; }
   {LINE_COMMENT}           { leftHasWS = true; return SwiftTypes.LINE_COMMENT; }
-  "/*"                     { yybegin(IN_BLOCK_COMMENT); blockCommentDepth = 1; }
+  "/*"                     { yybegin(IN_BLOCK_COMMENT); blockCommentDepth = 1; blockCommentStart = zzStartRead; }
 
   // ---- Compiler directives (must precede '#' fallback) ----
   "#if"                    { return term(SwiftTypes.HASH_IF); }
@@ -301,7 +321,15 @@ OP_CHAR            = ("/" | "=" | "-" | "+" | "!" | "*" | "%" | "&" | "|" | "<" 
   {IDENTIFIER}             { return term(SwiftTypes.IDENTIFIER); }
 
   // ---- Operator catch-all (classified by whitespace context) ----
-  "." {OP_CHAR}+           { classifyOp(); return SwiftTypes.DOT_OPERATOR; }
+  //
+  // Dot-prefixed operators ({@code .+}, {@code .>=}, {@code .&}, etc. —
+  // SIMD comparison/arithmetic) allow {@code >} in their suffix even
+  // though {@code >} is excluded from {@code OP_CHAR} (so plain
+  // {@code >} stays primitive for generic close). The dot-prefix
+  // disambiguates: nothing legitimate starts a generic-close with
+  // {@code .}, so combining {@code .} with following {@code >}s here
+  // doesn't conflict with generic parsing.
+  "." ({OP_CHAR}|">")+     { classifyOp(); return SwiftTypes.DOT_OPERATOR; }
   "."                      { return term(SwiftTypes.DOT); }
   {OP_CHAR}+               { return classifyOp(); }
 
@@ -314,13 +342,28 @@ OP_CHAR            = ("/" | "=" | "-" | "+" | "!" | "*" | "%" | "&" | "|" | "<" 
                               blockCommentDepth--;
                               if (blockCommentDepth == 0) {
                                   yybegin(YYINITIAL);
+                                  // Re-anchor the match to span the entire
+                                  // {@code /* ... */} comment (start of the
+                                  // outermost open through current position
+                                  // = end of closing {@code */}). Without
+                                  // this the emitted token only covers the
+                                  // 2-byte {@code */} and Consulo's lexer
+                                  // validator throws "Discontinuous
+                                  // sequence of tokens".
+                                  zzStartRead = blockCommentStart;
                                   leftHasWS = true;
                                   return SwiftTypes.BLOCK_COMMENT;
                               }
                            }
   [^/*]+                   { /* swallow */ }
   [/*]                     { /* swallow stray */ }
-  <<EOF>>                  { yybegin(YYINITIAL); leftHasWS = true; return SwiftTypes.BLOCK_COMMENT; }
+  <<EOF>>                  {
+                              yybegin(YYINITIAL);
+                              // Unterminated comment at EOF — span what we have.
+                              zzStartRead = blockCommentStart;
+                              leftHasWS = true;
+                              return SwiftTypes.BLOCK_COMMENT;
+                           }
 }
 
 [^]                        { leftHasWS = false; return TokenType.BAD_CHARACTER; }

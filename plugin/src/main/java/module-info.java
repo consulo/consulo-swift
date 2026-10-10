@@ -4,4 +4,11 @@
  */
 module consulo.swift {
     requires consulo.application.api;
+
+    requires consulo.swift.bitcode;
+    requires consulo.swift.module.decompiler;
+
+    requires consulo.swift.toolchain;
+    requires consulo.swift.packageManager;
+    requires consulo.swift.execution;
 }

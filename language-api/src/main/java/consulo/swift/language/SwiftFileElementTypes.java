@@ -16,10 +16,11 @@
 
 package consulo.swift.language;
 
-import consulo.language.ast.IFileElementType;
+import consulo.language.psi.stub.IStubFileElementType;
+import consulo.swift.language.psi.stub.SwiftFileStubElementType;
 
 public final class SwiftFileElementTypes {
-    public static final IFileElementType SWIFT_FILE = new IFileElementType(SwiftLanguage.INSTANCE);
+    public static final IStubFileElementType<?> SWIFT_FILE = new SwiftFileStubElementType();
 
     private SwiftFileElementTypes() {
     }

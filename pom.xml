@@ -28,9 +28,14 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>swift-bitcode</module>
+        <module>swift-module-decompiler</module>
         <module>language-api</module>
         <module>language-impl</module>
         <module>language-editor-impl</module>
+        <module>swift-toolchain</module>
+        <module>swift-package-manager</module>
+        <module>swift-execution</module>
         <module>plugin</module>
     </modules>
 </project>
