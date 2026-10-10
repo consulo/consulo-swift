@@ -1,0 +1,30 @@
+Test Suite 'All tests' started at 2026-10-10 02:17:38.509
+Test Suite 'debug.xctest' started at 2026-10-10 02:17:38.522
+Test Suite 'GreetTests' started at 2026-10-10 02:17:38.522
+Test Case 'GreetTests.testFails' started at 2026-10-10 02:17:38.522
+/work/demo/Tests/DemoTests/T.swift:10: error: GreetTests.testFails : XCTAssertEqual failed: ("hi") is not equal to ("bye") - 
+Test Case 'GreetTests.testFails' failed (0.001 seconds)
+Test Case 'GreetTests.testGreet' started at 2026-10-10 02:17:38.523
+Test Case 'GreetTests.testGreet' passed (0.0 seconds)
+Test Suite 'GreetTests' failed at 2026-10-10 02:17:38.523
+	 Executed 2 tests, with 1 failure (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'debug.xctest' failed at 2026-10-10 02:17:38.523
+	 Executed 2 tests, with 1 failure (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'All tests' failed at 2026-10-10 02:17:38.523
+	 Executed 2 tests, with 1 failure (0 unexpected) in 0.001 (0.001) seconds
+◇ Test run started.
+↳ Testing Library Version: 6.4 (efd8d65801f569d)
+↳ Target Platform: x86_64-unknown-linux-gnu
+◇ Suite GreetingSuite started.
+◇ Test "Greeting is long" started.
+◇ Test greets() started.
+✔ Test greets() passed after 0.001 seconds.
+✘ Test "Greeting is long" recorded an issue at SwiftTestingTests.swift:10:9: Expectation failed: greet().count > 5
+↳ greet().count > 5 → false
+↳   greet().count → 2
+✘ Test "Greeting is long" failed after 0.001 seconds with 1 issue.
+✘ Suite GreetingSuite failed after 0.001 seconds with 1 issue.
+✘ Test run with 2 tests in 1 suite failed after 0.001 seconds with 1 issue.
+Note: Some test targets reported failures:
+  - DemoPackageTests (XCTest)
+  - DemoPackageTests (Swift Testing)

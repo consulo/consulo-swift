@@ -1,0 +1,50 @@
+compiler.name:
+  text: "Swift Package Manager"
+compiler.no.toolchain:
+  text: "Module ''{0}'' has no Swift toolchain. Select one in the module settings or in the Swift Package Manager settings."
+compiler.no.package:
+  text: "Module ''{0}'' is not a Swift package - there is no Package.swift in its content roots"
+compiler.cannot.run:
+  text: "Cannot run ''{0}'': {1}"
+compiler.bin.path.failed:
+  text: "Cannot find the build directory of the package: ''swift build --show-bin-path'' failed"
+run.configuration.name:
+  text: "Swift"
+run.configuration.description:
+  text: "Run or debug an executable product of a Swift package"
+run.configuration.module.label:
+  text: "Module:"
+run.configuration.product.label:
+  text: "Executable product:"
+run.configuration.build.configuration.label:
+  text: "Build configuration:"
+run.configuration.no.module:
+  text: "No module is selected"
+run.configuration.no.product:
+  text: "No executable product is specified"
+run.configuration.no.toolchain:
+  text: "Module ''{0}'' has no Swift toolchain"
+run.configuration.no.package:
+  text: "Module ''{0}'' is not a Swift package"
+test.configuration.name:
+  text: "Swift Test"
+test.configuration.description:
+  text: "Run or debug the tests of a Swift package"
+test.configuration.framework.label:
+  text: "Test framework:"
+test.configuration.filter.label:
+  text: "Filter (regular expression):"
+test.framework.all:
+  text: "XCTest and Swift Testing (debugging runs XCTest)"
+test.framework.xctest:
+  text: "XCTest"
+test.framework.swift.testing:
+  text: "Swift Testing"
+test.debug.no.binary:
+  text: "There is no test binary (*PackageTests.xctest) to debug in ''{0}''. On macOS debugging tests is not supported yet."
+test.producer.all.tests:
+  text: "All tests in ''{0}''"
+test.producer.target:
+  text: "Tests in ''{0}''"
+test.producer.file:
+  text: "Tests in {0}"
