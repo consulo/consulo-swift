@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package consulo.swift.language.impl.psi;
 
 import consulo.annotation.access.RequiredReadAction;
@@ -25,6 +24,7 @@ import consulo.language.psi.PsiElement;
 import consulo.language.psi.PsiFile;
 import consulo.language.psi.stub.IStubElementType;
 import consulo.language.util.IncorrectOperationException;
+import consulo.localize.LocalizeValue;
 import consulo.navigation.ItemPresentation;
 import consulo.platform.base.icon.PlatformIconGroup;
 import consulo.swift.language.psi.SwiftDeclaration;
@@ -46,8 +46,8 @@ public abstract class SwiftStubbedElementImpl<S extends SwiftDeclarationStub> ex
         super(stub, nodeType);
     }
 
-    @RequiredReadAction
     @Override
+    @RequiredReadAction
     public @Nullable String getName() {
         S stub = getGreenStub();
         if (stub != null) {
@@ -56,21 +56,21 @@ public abstract class SwiftStubbedElementImpl<S extends SwiftDeclarationStub> ex
         return SwiftDeclarationNames.getName(getNode());
     }
 
-    @RequiredReadAction
     @Override
+    @RequiredReadAction
     public @Nullable PsiElement getNameIdentifier() {
         ASTNode nameNode = SwiftDeclarationNames.findNameNode(getNode());
         return nameNode == null ? null : nameNode.getPsi();
     }
 
-    @RequiredWriteAction
     @Override
+    @RequiredWriteAction
     public PsiElement setName(String name) throws IncorrectOperationException {
         throw new IncorrectOperationException("Renaming Swift declarations is not supported yet");
     }
 
-    @RequiredReadAction
     @Override
+    @RequiredReadAction
     public int getTextOffset() {
         PsiElement nameIdentifier = getNameIdentifier();
         return nameIdentifier != null ? nameIdentifier.getTextOffset() : super.getTextOffset();
@@ -79,14 +79,14 @@ public abstract class SwiftStubbedElementImpl<S extends SwiftDeclarationStub> ex
     @Override
     public ItemPresentation getPresentation() {
         return new ItemPresentation() {
-            @RequiredReadAction
             @Override
-            public @Nullable String getPresentableText() {
-                return getName();
+            @RequiredReadAction
+            public LocalizeValue getPresentableText() {
+                return LocalizeValue.ofNullable(getName());
             }
 
-            @RequiredReadAction
             @Override
+            @RequiredReadAction
             public @Nullable String getLocationString() {
                 SwiftDeclaration container = getStubOrPsiParentOfType(SwiftDeclaration.class);
                 String containerName = container == null ? null : container.getName();
@@ -98,6 +98,7 @@ public abstract class SwiftStubbedElementImpl<S extends SwiftDeclarationStub> ex
             }
 
             @Override
+            @RequiredReadAction
             public @Nullable Image getIcon() {
                 return iconOf(getElementType());
             }
@@ -125,6 +126,7 @@ public abstract class SwiftStubbedElementImpl<S extends SwiftDeclarationStub> ex
      * Kept in the form of {@code SwiftElementImpl} - the parser tests compare PSI dumps.
      */
     @Override
+    @RequiredReadAction
     public String toString() {
         return getClass().getSimpleName() + "(" + getElementType() + ")";
     }
