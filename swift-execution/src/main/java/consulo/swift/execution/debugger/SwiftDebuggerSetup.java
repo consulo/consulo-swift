@@ -16,14 +16,13 @@
 package consulo.swift.execution.debugger;
 
 import consulo.application.Application;
+import consulo.localize.LocalizeValue;
 import consulo.nativeDev.debugger.NativeDebuggerInstallation;
 import consulo.nativeDev.debugger.NativeDebuggerProvider;
 import consulo.nativeDev.debugger.dap.LldbDapNativeDebuggerProvider;
 import consulo.nativeDev.debugger.driver.NativeDebuggerSetup;
 import consulo.project.Project;
-import consulo.project.ui.notification.Notification;
-import consulo.project.ui.notification.NotificationType;
-import consulo.project.ui.notification.Notifications;
+import consulo.project.ui.notification.NotificationService;
 import consulo.swift.execution.localize.SwiftExecutionLocalize;
 import consulo.swift.toolchain.SwiftToolchain;
 import org.jspecify.annotations.Nullable;
@@ -58,16 +57,14 @@ public class SwiftDebuggerSetup implements NativeDebuggerSetup {
 
         NativeDebuggerInstallation fallback = findStockLldbDap(adapter);
         if (adapters.markReported(adapter)) {
-            String text = fallback == null
-                ? SwiftExecutionLocalize.debuggerToolchainLldbBroken(adapter, problem).get()
-                : SwiftExecutionLocalize.debuggerToolchainLldbBrokenFallback(adapter, problem, fallback.executable()).get();
-            Notification notification = new Notification(
-                SwiftExecutionNotificationGroupContributor.GROUP,
-                SwiftExecutionLocalize.debuggerToolchainLldbTitle().get(),
-                text,
-                NotificationType.WARNING
-            );
-            Notifications.Bus.notify(notification, project);
+            LocalizeValue text = fallback == null
+                ? SwiftExecutionLocalize.debuggerToolchainLldbBroken(adapter, problem)
+                : SwiftExecutionLocalize.debuggerToolchainLldbBrokenFallback(adapter, problem, fallback.executable());
+
+            NotificationService.getInstance().newWarn(SwiftExecutionNotificationGroupContributor.GROUP)
+                .title(SwiftExecutionLocalize.debuggerToolchainLldbTitle())
+                .content(text)
+                .notify(project);
         }
         return new SwiftDebuggerSetup(fallback == null ? List.of() : List.of(fallback));
     }

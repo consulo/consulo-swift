@@ -40,9 +40,7 @@ import consulo.process.util.CapturingProcessUtil;
 import consulo.process.util.ProcessOutput;
 import consulo.project.Project;
 import consulo.project.startup.StartupManager;
-import consulo.project.ui.notification.Notification;
-import consulo.project.ui.notification.NotificationType;
-import consulo.project.ui.notification.Notifications;
+import consulo.project.ui.notification.NotificationService;
 import consulo.swift.language.icon.SwiftIconGroup;
 import consulo.swift.packageManager.SwiftPackageManagerConstants;
 import consulo.swift.packageManager.SwiftPackageManagerUtil;
@@ -221,12 +219,9 @@ public class SwiftNewModuleBuilder implements NewModuleBuilder {
     }
 
     private static void notifyFailure(Project project, String reason) {
-        Notification notification = new Notification(
-            SwiftPackageNotificationGroupContributor.GROUP,
-            SwiftPackageManagerLocalize.systemName().get(),
-            SwiftPackageManagerLocalize.newProjectFailed(reason).get(),
-            NotificationType.ERROR
-        );
-        Notifications.Bus.notify(notification, project);
+        NotificationService.getInstance().newError(SwiftPackageNotificationGroupContributor.GROUP)
+            .title(SwiftPackageManagerLocalize.systemName())
+            .content(SwiftPackageManagerLocalize.newProjectFailed(reason))
+            .notify(project);
     }
 }
