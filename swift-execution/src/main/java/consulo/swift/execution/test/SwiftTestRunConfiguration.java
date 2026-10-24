@@ -17,13 +17,13 @@ package consulo.swift.execution.test;
 
 import consulo.execution.RuntimeConfigurationException;
 import consulo.execution.configuration.ConfigurationFactory;
+import consulo.execution.configuration.LegacyRunConfigurationConverter;
 import consulo.execution.configuration.ModuleBasedConfiguration;
-import consulo.execution.configuration.RunConfiguration;
 import consulo.execution.configuration.RunConfigurationModule;
 import consulo.execution.configuration.RunProfileState;
 import consulo.execution.configuration.RunProfileWithCompileBeforeLaunchOption;
 import consulo.execution.configuration.RuntimeConfigurationError;
-import consulo.execution.configuration.ui.SettingsEditor;
+import consulo.execution.configuration.fragment.RunConfigurationFragment;
 import consulo.execution.executor.Executor;
 import consulo.execution.runner.ExecutionEnvironment;
 import consulo.execution.test.sm.runner.SMRunnerConsolePropertiesProvider;
@@ -32,7 +32,6 @@ import consulo.module.Module;
 import consulo.module.ModuleManager;
 import consulo.nativeDev.debugger.driver.NativeDebugTarget;
 import consulo.nativeDev.debugger.run.NativeProgramRunConfiguration;
-import consulo.nativeDev.debugger.run.NativeProgramSettings;
 import consulo.process.ExecutionException;
 import consulo.project.Project;
 import consulo.swift.execution.compiler.SwiftBuildCommand;
@@ -44,9 +43,6 @@ import consulo.swift.packageManager.SwiftPackageManagerUtil;
 import consulo.swift.toolchain.SwiftToolchain;
 import consulo.swift.toolchain.module.extension.SwiftModuleExtension;
 import consulo.util.lang.StringUtil;
-import consulo.util.xml.serializer.InvalidDataException;
-import consulo.util.xml.serializer.WriteExternalException;
-import org.jdom.Element;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -66,16 +62,39 @@ import java.util.stream.Stream;
 public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfigurationModule>
     implements NativeProgramRunConfiguration, SwiftBuildableConfiguration, RunProfileWithCompileBeforeLaunchOption,
     SMRunnerConsolePropertiesProvider {
-    private static final String ATTR_FILTER = "filter";
-    private static final String ATTR_FRAMEWORK = "framework";
     private static final String TEST_BINARY_SUFFIX = "PackageTests.xctest";
 
-    private String myFilter = "";
-    private SwiftTestFramework myFramework = SwiftTestFramework.ALL;
-    private final NativeProgramSettings myProgramSettings = new NativeProgramSettings();
 
     public SwiftTestRunConfiguration(Project project, ConfigurationFactory factory, String name) {
         super(name, new RunConfigurationModule(project), factory);
+    }
+
+    @Override
+    protected Class<SwiftTestRunConfigurationOptions> getOptionsClass() {
+        return SwiftTestRunConfigurationOptions.class;
+    }
+
+    @Override
+    public SwiftTestRunConfigurationOptions getOptions() {
+        return (SwiftTestRunConfigurationOptions) super.getOptions();
+    }
+
+    @Override
+    protected void convertLegacyState(LegacyRunConfigurationConverter converter) {
+        super.convertLegacyState(converter);
+
+        SwiftTestRunConfigurationOptions options = new SwiftTestRunConfigurationOptions();
+        options.setFilter(converter.getElement().getAttributeValue("filter"));
+        SwiftTestFramework framework = parseFramework(converter.getElement().getAttributeValue("framework"));
+        options.setFramework(framework == null || framework == SwiftTestFramework.ALL ? null : framework.name());
+        converter.setOptions(options);
+
+        NativeProgramRunConfiguration.convertLegacyProgramState(converter);
+    }
+
+    @Override
+    public List<RunConfigurationFragment<?>> createFragments() {
+        return List.of(new SwiftTestsFragment());
     }
 
     /**
@@ -83,25 +102,22 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
      * empty for all tests
      */
     public String getFilter() {
-        return myFilter;
+        return StringUtil.notNullize(getOptions().getFilter());
     }
 
     public void setFilter(@Nullable String filter) {
-        myFilter = StringUtil.notNullize(filter).trim();
+        getOptions().setFilter(StringUtil.notNullize(filter).trim());
     }
 
     public SwiftTestFramework getFramework() {
-        return myFramework;
+        SwiftTestFramework framework = parseFramework(getOptions().getFramework());
+        return framework == null ? SwiftTestFramework.ALL : framework;
     }
 
     public void setFramework(@Nullable SwiftTestFramework framework) {
-        myFramework = framework == null ? SwiftTestFramework.ALL : framework;
+        getOptions().setFramework(framework == null || framework == SwiftTestFramework.ALL ? null : framework.name());
     }
 
-    @Override
-    public NativeProgramSettings getProgramSettings() {
-        return myProgramSettings;
-    }
 
     /**
      * {@code swift build --build-tests} with the arguments of the package.
@@ -132,10 +148,11 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
         }
         List<String> buildArguments = SwiftBuildCommand.build(getProject(), packageDirectory, null, SwiftBuildCommand.DEBUG);
         arguments.addAll(buildArguments.subList(1, buildArguments.size()));
-        arguments.addAll(myFramework.getSwiftTestArguments());
-        if (!myFilter.isEmpty()) {
+        arguments.addAll(getFramework().getSwiftTestArguments());
+        String filter = getFilter();
+        if (!filter.isEmpty()) {
             arguments.add("--filter");
-            arguments.add(myFilter);
+            arguments.add(filter);
         }
         if (eventStream != null) {
             arguments.add("--event-stream-output-path");
@@ -143,7 +160,7 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
             arguments.add("--event-stream-version");
             arguments.add("0");
         }
-        arguments.addAll(myProgramSettings.getProgramArguments());
+        arguments.addAll(getProgramArguments());
         return arguments;
     }
 
@@ -158,10 +175,6 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
         return modules;
     }
 
-    @Override
-    public SettingsEditor<? extends RunConfiguration> getConfigurationEditor() {
-        return new SwiftTestRunConfigurationEditor(getProject());
-    }
 
     @Override
     public SMTRunnerConsoleProperties createTestConsoleProperties(Executor executor) {
@@ -200,7 +213,7 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
         if (toolchain == null) {
             throw new ExecutionException(SwiftExecutionLocalize.runConfigurationNoToolchain(module.getName()).get());
         }
-        Path workingDirectory = myProgramSettings.getWorkingDirectoryPath();
+        Path workingDirectory = resolveWorkingDirectory(packageDirectory);
         return new SwiftTestLaunch(toolchain, packageDirectory, workingDirectory != null ? workingDirectory : packageDirectory);
     }
 
@@ -226,20 +239,20 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
         }
 
         List<String> arguments = new ArrayList<>();
-        if (myFramework == SwiftTestFramework.SWIFT_TESTING) {
+        if (getFramework() == SwiftTestFramework.SWIFT_TESTING) {
             arguments.add("--testing-library");
             arguments.add("swift-testing");
-            if (!myFilter.isEmpty()) {
+            if (!getFilter().isEmpty()) {
                 arguments.add("--filter");
-                arguments.add(myFilter);
+                arguments.add(getFilter());
             }
         }
-        else if (!myFilter.isEmpty()) {
-            arguments.add(myFilter);
+        else if (!getFilter().isEmpty()) {
+            arguments.add(getFilter());
         }
-        arguments.addAll(myProgramSettings.getProgramArguments());
+        arguments.addAll(getProgramArguments());
 
-        Map<String, String> variables = new LinkedHashMap<>(myProgramSettings.getEnvs());
+        Map<String, String> variables = new LinkedHashMap<>(getEnvs());
         launch.toolchain().configureProgramEnvironment(variables);
         return NativeDebugTarget.launch(testBinary, arguments, launch.workingDirectory(), variables, null)
             .withSetup(SwiftDebuggerSetup.create(getProject(), launch.toolchain()));
@@ -258,24 +271,9 @@ public class SwiftTestRunConfiguration extends ModuleBasedConfiguration<RunConfi
         }
     }
 
-    @Override
-    public void readExternal(Element element) throws InvalidDataException {
-        super.readExternal(element);
-        setFilter(element.getAttributeValue(ATTR_FILTER));
-        String framework = element.getAttributeValue(ATTR_FRAMEWORK);
-        setFramework(framework == null ? null : parseFramework(framework));
-        myProgramSettings.readExternal(element);
-    }
 
-    @Override
-    public void writeExternal(Element element) throws WriteExternalException {
-        super.writeExternal(element);
-        element.setAttribute(ATTR_FILTER, myFilter);
-        element.setAttribute(ATTR_FRAMEWORK, myFramework.name());
-        myProgramSettings.writeExternal(element);
-    }
 
-    private static @Nullable SwiftTestFramework parseFramework(String name) {
+    private static @Nullable SwiftTestFramework parseFramework(@Nullable String name) {
         for (SwiftTestFramework framework : SwiftTestFramework.values()) {
             if (framework.name().equals(name)) {
                 return framework;

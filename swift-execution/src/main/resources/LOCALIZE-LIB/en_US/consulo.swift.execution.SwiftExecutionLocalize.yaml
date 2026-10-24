@@ -16,6 +16,8 @@ run.configuration.name:
   text: "Swift"
 run.configuration.description:
   text: "Run or debug an executable product of a Swift package"
+run.configuration.fragment.product:
+  text: "Executable product"
 run.configuration.module.label:
   text: "Module:"
 run.configuration.product.label:
@@ -34,6 +36,8 @@ test.configuration.name:
   text: "Swift Test"
 test.configuration.description:
   text: "Run or debug the tests of a Swift package"
+test.configuration.fragment.tests:
+  text: "Tests"
 test.configuration.framework.label:
   text: "Test framework:"
 test.configuration.filter.label:
