@@ -28,6 +28,8 @@ import consulo.ui.image.Image;
 import jakarta.inject.Inject;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Opens/imports a directory holding {@code Package.swift} (or the manifest itself). The package directory is the linked
@@ -46,11 +48,11 @@ public class SwiftPackageModuleImportProvider extends AbstractExternalModuleImpo
     }
 
     @Override
-    public boolean canImport(File fileOrDirectory) {
-        if (fileOrDirectory.isDirectory()) {
-            return new File(fileOrDirectory, SwiftPackageManagerConstants.MANIFEST).isFile();
+    public boolean canImport(Path fileOrDirectory) {
+        if (Files.isDirectory(fileOrDirectory)) {
+            return Files.exists((fileOrDirectory.resolve(SwiftPackageManagerConstants.MANIFEST)));
         }
-        return SwiftPackageManagerConstants.MANIFEST.equals(fileOrDirectory.getName());
+        return SwiftPackageManagerConstants.MANIFEST.equals(fileOrDirectory.getFileName().toString());
     }
 
     @Override
