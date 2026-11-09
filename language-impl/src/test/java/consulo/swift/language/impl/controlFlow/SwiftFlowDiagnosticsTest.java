@@ -69,6 +69,15 @@ public class SwiftFlowDiagnosticsTest extends SimpleParsingTest<Object> {
         doTest(context, null);
     }
 
+    /**
+     * Nothing for a declaration with a parse error - the missing return of second() included, the recovery may have
+     * ended the body of a member early
+     */
+    @Test
+    public void testBroken(Context context) throws Exception {
+        doTest(context, null);
+    }
+
     @Override
     protected LanguageFileType getFileType(Context context, @Nullable Object testContext) {
         return SwiftFileType.INSTANCE;
@@ -76,7 +85,8 @@ public class SwiftFlowDiagnosticsTest extends SimpleParsingTest<Object> {
 
     @Override
     protected void checkResult(Context context, @Nullable Object testContext, PsiFile file) throws Exception {
-        Assertions.assertTrue(PsiTreeUtil.findChildrenOfType(file, PsiErrorElement.class).isEmpty(), "parse errors");
+        boolean broken = file.getName().startsWith("Broken");
+        Assertions.assertEquals(broken, !PsiTreeUtil.findChildrenOfType(file, PsiErrorElement.class).isEmpty(), "parse errors");
         String text = file.getText();
         String[] lines = text.split("\n", -1);
 

@@ -23,6 +23,7 @@ import consulo.language.ast.TokenSet;
 import consulo.language.controlFlow.ControlFlow;
 import consulo.language.controlFlow.Instruction;
 import consulo.language.psi.PsiElement;
+import consulo.language.psi.PsiErrorElement;
 import consulo.language.psi.PsiFile;
 import consulo.language.psi.PsiModificationTracker;
 import consulo.language.psi.PsiUtilCore;
@@ -309,10 +310,47 @@ public final class SwiftControlFlow implements ControlFlow {
 
     @RequiredReadAction
     private static @Nullable SwiftControlFlow compute(PsiElement owner) {
-        if (PsiTreeUtil.hasErrorElements(owner)) {
+        if (hasErrors(owner)) {
             return null;
         }
         return SwiftControlFlowBuilder.build(owner, bodyStatements(owner), implicitReturn(owner));
+    }
+
+    /**
+     * A parse error in the declaration of the file the owner is in - the recovery may end a body early, out of the
+     * error, and the rest of it would be checked as if it were all of it
+     */
+    @RequiredReadAction
+    private static boolean hasErrors(PsiElement owner) {
+        // a body ended early - without its closing brace
+        PsiElement block = PsiUtilCore.getElementType(owner) == SwiftTypes.CLOSURE_EXPRESSION ? owner : bodyBlock(owner);
+        if (block != null && PsiUtilCore.getElementType(block.getLastChild()) != SwiftTypes.RBRACE) {
+            return true;
+        }
+        PsiElement declaration = owner;
+        while (!(declaration instanceof PsiFile) && declaration.getParent() != null && !(declaration.getParent() instanceof PsiFile)) {
+            declaration = declaration.getParent();
+        }
+        if (!declaration.isPhysical()) {
+            return hasErrorElements(declaration);
+        }
+        PsiElement element = declaration;
+        return LanguageCachedValueUtil.getCachedValue(element,
+            () -> CachedValueProvider.Result.create(hasErrorElements(element), PsiModificationTracker.MODIFICATION_COUNT));
+    }
+
+    /**
+     * An error in the declaration, or right after it - where the recovery leaves the rest of a broken body
+     */
+    private static boolean hasErrorElements(PsiElement declaration) {
+        if (PsiTreeUtil.hasErrorElements(declaration)) {
+            return true;
+        }
+        PsiElement next = declaration instanceof PsiFile ? null : declaration.getNextSibling();
+        while (next != null && !SwiftExpressionTree.isSignificant(next)) {
+            next = next.getNextSibling();
+        }
+        return next instanceof PsiErrorElement;
     }
 
     public PsiElement getOwner() {
