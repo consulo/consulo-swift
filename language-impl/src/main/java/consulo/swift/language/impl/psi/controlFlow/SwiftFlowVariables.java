@@ -28,10 +28,7 @@ import consulo.language.psi.util.LanguageCachedValueUtil;
 import consulo.swift.language.psi.SwiftTypes;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * The variables of the flow owners and the resolve of a name used in an expression to one of them - by scope, as the
@@ -322,17 +319,7 @@ public final class SwiftFlowVariables {
         if (OWNER_BOUNDARIES.contains(type)) {
             return null;
         }
-        if (type == SwiftTypes.STATEMENTS || scope instanceof PsiFile) {
-            // the statements before, the nearest first
-            for (PsiElement statement = child.getPrevSibling(); statement != null; statement = statement.getPrevSibling()) {
-                if (statement.getFirstChild() != null) {
-                    int size = result.size();
-                    declarations(statement, result);
-                    reverse(result, size);
-                }
-            }
-        }
-        else if (type == SwiftTypes.IF_STATEMENT || type == SwiftTypes.WHILE_STATEMENT) {
+        if (type == SwiftTypes.IF_STATEMENT || type == SwiftTypes.WHILE_STATEMENT) {
             IElementType childType = PsiUtilCore.getElementType(child);
             if (childType == SwiftTypes.CODE_BLOCK) {
                 conditionBindings(firstChildOfType(scope, SwiftTypes.CONDITION_LIST), null, result);
@@ -386,14 +373,6 @@ public final class SwiftFlowVariables {
         return result;
     }
 
-    private static void reverse(List<PsiElement> list, int from) {
-        for (int i = from, j = list.size() - 1; i < j; i++, j--) {
-            PsiElement element = list.get(i);
-            list.set(i, list.get(j));
-            list.set(j, element);
-        }
-    }
-
     // endregion
 
     // region resolve
@@ -404,22 +383,98 @@ public final class SwiftFlowVariables {
      */
     @RequiredReadAction
     public static @Nullable PsiElement resolve(String name, PsiElement element) {
-        PsiElement child = element;
-        for (PsiElement scope = element.getParent(); scope != null; child = scope, scope = scope.getParent()) {
-            List<PsiElement> visible = visible(scope, child);
-            if (visible == null) {
-                return null;
-            }
-            for (PsiElement variable : visible) {
-                if (name.equals(name(variable))) {
-                    return variable;
+        return new Resolver().resolve(name, element);
+    }
+
+    /**
+     * The resolve of the names of one owner - the declarations of each block indexed once, by name and position, not
+     * searched again for each reference
+     */
+    public static final class Resolver {
+        /**
+         * The positions of the statements of a block, the declarations of each name with the position of their statement
+         */
+        private record BlockIndex(Map<PsiElement, Integer> positions, Map<String, List<Map.Entry<Integer, PsiElement>>> declarations) {
+        }
+
+        private final Map<PsiElement, BlockIndex> myBlocks = new HashMap<>();
+
+        @RequiredReadAction
+        public @Nullable PsiElement resolve(String name, PsiElement element) {
+            PsiElement child = element;
+            for (PsiElement scope = element.getParent(); scope != null; child = scope, scope = scope.getParent()) {
+                if (PsiUtilCore.getElementType(scope) == SwiftTypes.STATEMENTS || scope instanceof PsiFile) {
+                    PsiElement variable = inBlock(scope, child, name);
+                    if (variable != null) {
+                        return variable;
+                    }
+                    if (scope instanceof PsiFile) {
+                        return null;
+                    }
+                    continue;
+                }
+                List<PsiElement> visible = visible(scope, child);
+                if (visible == null) {
+                    return null;
+                }
+                for (PsiElement variable : visible) {
+                    if (name.equals(name(variable))) {
+                        return variable;
+                    }
                 }
             }
-            if (scope instanceof PsiFile) {
+            return null;
+        }
+
+        /**
+         * The last declaration of the name in a statement of the block before the child
+         */
+        @RequiredReadAction
+        private @Nullable PsiElement inBlock(PsiElement block, PsiElement child, String name) {
+            BlockIndex index = myBlocks.computeIfAbsent(block, Resolver::index);
+            List<Map.Entry<Integer, PsiElement>> declarations = index.declarations().get(name);
+            Integer position = index.positions().get(child);
+            if (declarations == null || position == null) {
                 return null;
             }
+            // sorted by position - the last one before the child
+            int low = 0;
+            int high = declarations.size() - 1;
+            PsiElement result = null;
+            while (low <= high) {
+                int middle = (low + high) >>> 1;
+                Map.Entry<Integer, PsiElement> declaration = declarations.get(middle);
+                if (declaration.getKey() < position) {
+                    result = declaration.getValue();
+                    low = middle + 1;
+                }
+                else {
+                    high = middle - 1;
+                }
+            }
+            return result;
         }
-        return null;
+
+        @RequiredReadAction
+        private static BlockIndex index(PsiElement block) {
+            Map<PsiElement, Integer> positions = new HashMap<>();
+            Map<String, List<Map.Entry<Integer, PsiElement>>> declarations = new HashMap<>();
+            List<PsiElement> variables = new ArrayList<>();
+            int position = 0;
+            for (PsiElement statement = block.getFirstChild(); statement != null; statement = statement.getNextSibling()) {
+                if (statement.getFirstChild() == null) {
+                    continue;
+                }
+                positions.put(statement, position);
+                variables.clear();
+                declarations(statement, variables);
+                for (PsiElement variable : variables) {
+                    declarations.computeIfAbsent(name(variable), it -> new ArrayList<>(1)).add(Map.entry(position, variable));
+                }
+                position++;
+            }
+            return new BlockIndex(positions, declarations);
+        }
     }
 
     /**

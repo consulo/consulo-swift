@@ -92,6 +92,7 @@ public class SwiftControlFlowBuilder {
 
     private final Set<String> myNames;
     private final Set<String> myNoReturnFunctions;
+    private final SwiftFlowVariables.Resolver myResolver = new SwiftFlowVariables.Resolver();
     // the stored properties an initializer must initialize
     private final @Nullable SwiftInitializerInfo myInitializer;
 
@@ -1235,7 +1236,7 @@ public class SwiftControlFlowBuilder {
                 return false;
             }
             String name = SwiftFlowVariables.unquote(identifier.getText());
-            if (myNames.contains(name) && SwiftFlowVariables.resolve(name, identifier) != null) {
+            if (myNames.contains(name) && myResolver.resolve(name, identifier) != null) {
                 return false;
             }
         }
@@ -1274,7 +1275,7 @@ public class SwiftControlFlowBuilder {
             return false;
         }
         String name = SwiftFlowVariables.unquote(identifier.getText());
-        return myNoReturnFunctions.contains(name) && (!myNames.contains(name) || SwiftFlowVariables.resolve(name, identifier) == null);
+        return myNoReturnFunctions.contains(name) && (!myNames.contains(name) || myResolver.resolve(name, identifier) == null);
     }
 
     /**
@@ -1325,7 +1326,7 @@ public class SwiftControlFlowBuilder {
     @RequiredReadAction
     private void reference(PsiElement element, PsiElement identifier, Access access, TextRange range) {
         String name = SwiftFlowVariables.unquote(identifier.getText());
-        PsiElement variable = myNames.contains(name) ? SwiftFlowVariables.resolve(name, identifier) : null;
+        PsiElement variable = myNames.contains(name) ? myResolver.resolve(name, identifier) : null;
         if (variable == null && myInitializer != null) {
             // x = 1 in an initializer - a stored property
             variable = myInitializer.properties().get(name);
@@ -1427,7 +1428,7 @@ public class SwiftControlFlowBuilder {
                     }
                     String name = text.substring(i, nameEnd);
                     if (myNames.contains(name)) {
-                        PsiElement variable = SwiftFlowVariables.resolve(name, literal);
+                        PsiElement variable = myResolver.resolve(name, literal);
                         if (variable != null) {
                             readWrite(literal, variable, Access.READ, new TextRange(offset + i, offset + nameEnd));
                         }
