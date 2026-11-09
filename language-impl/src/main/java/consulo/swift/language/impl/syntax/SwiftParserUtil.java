@@ -255,6 +255,14 @@ public class SwiftParserUtil extends GeneratedParserUtilBase {
     }
 
     /**
+     * The next token follows the previous one directly - no whitespace or comment between them
+     */
+    public static boolean noSpaceBefore(PsiBuilder b, int level) {
+        IElementType previous = b.rawLookup(-1);
+        return previous != null && previous != TokenType.WHITE_SPACE && previous != SwiftTypes.LINE_COMMENT && previous != SwiftTypes.BLOCK_COMMENT;
+    }
+
+    /**
      * No line break before the next token: the label of {@code break} and {@code continue}, the parentheses of a call and
      * the brackets of a subscript must be on the line of what they follow, a {@code (} on the next line starts a statement.
      */

@@ -864,7 +864,8 @@ private cond_postfix_suffix ::=
 // '?' is ambiguous: in `foo?.bar` and `foo?[i]` it's a postfix optional
 // chain, but bare `?` belongs to the ternary `? : `. This rule constrains the
 // postfix form to require a `.` or `[` to immediately follow.
-private optional_chain_suffix ::= QUESTION &(DOT | LBRACK)
+// `foo?(x)` is an optional call when the '?' follows the operand directly - `c ? (a) : b` is a ternary.
+private optional_chain_suffix ::= QUESTION &(DOT | LBRACK) | <<noSpaceBefore>> QUESTION &LPAREN
 
 dynamic_type_expression_suffix ::= DOT TYPE_TYPE_KEYWORD | DOT PROTOCOL_TYPE_KEYWORD
 
