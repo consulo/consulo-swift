@@ -234,24 +234,39 @@ public final class SwiftControlFlow implements ControlFlow {
     public static @Nullable PsiElement resultType(PsiElement owner) {
         IElementType type = PsiUtilCore.getElementType(owner);
         if (type == SwiftTypes.FUNCTION_DECLARATION) {
-            PsiElement result = SwiftFlowVariables.firstChildOfType(SwiftFlowVariables.firstChildOfType(owner, SwiftTypes.FUNCTION_SIGNATURE),
-                SwiftTypes.FUNCTION_RESULT);
-            return SwiftFlowVariables.firstChildOfType(result, SwiftTypes.TYPE);
+            return typeOf(SwiftFlowVariables.firstChildOfType(SwiftFlowVariables.firstChildOfType(owner, SwiftTypes.FUNCTION_SIGNATURE),
+                SwiftTypes.FUNCTION_RESULT));
         }
         if (type == SwiftTypes.CLOSURE_EXPRESSION) {
-            PsiElement result = SwiftFlowVariables.firstChildOfType(SwiftFlowVariables.firstChildOfType(owner, SwiftTypes.CLOSURE_SIGNATURE),
-                SwiftTypes.FUNCTION_RESULT);
-            return SwiftFlowVariables.firstChildOfType(result, SwiftTypes.TYPE);
+            return typeOf(SwiftFlowVariables.firstChildOfType(SwiftFlowVariables.firstChildOfType(owner, SwiftTypes.CLOSURE_SIGNATURE),
+                SwiftTypes.FUNCTION_RESULT));
         }
         if (type == SwiftTypes.VARIABLE_DECLARATION) {
-            return SwiftFlowVariables.firstChildOfType(SwiftFlowVariables.firstChildOfType(owner, SwiftTypes.TYPE_ANNOTATION), SwiftTypes.TYPE);
+            return typeOf(SwiftFlowVariables.firstChildOfType(owner, SwiftTypes.TYPE_ANNOTATION));
         }
         if (type == SwiftTypes.SUBSCRIPT_DECLARATION) {
-            return SwiftFlowVariables.firstChildOfType(owner, SwiftTypes.TYPE);
+            return typeOf(owner);
         }
         if (type == SwiftTypes.GETTER_CLAUSE) {
             PsiElement property = owner.getParent() == null ? null : owner.getParent().getParent();
             return property == null ? null : resultType(property);
+        }
+        return null;
+    }
+
+    /**
+     * The type after the arrow or the colon - TYPE, or a type of one part (THE_SELF_TYPE, THE_ANY_TYPE)
+     */
+    private static @Nullable PsiElement typeOf(@Nullable PsiElement element) {
+        boolean after = false;
+        for (PsiElement child = element == null ? null : element.getFirstChild(); child != null; child = child.getNextSibling()) {
+            IElementType type = PsiUtilCore.getElementType(child);
+            if (type == SwiftTypes.ARROW || type == SwiftTypes.COLON) {
+                after = true;
+            }
+            else if (after && child.getFirstChild() != null && type != SwiftTypes.ATTRIBUTES) {
+                return child;
+            }
         }
         return null;
     }

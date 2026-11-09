@@ -1,0 +1,10 @@
+unreachable.after.statement:
+    text: "code after ''{0}'' will never be executed"
+unreachable:
+    text: "will never be executed"
+missing.return:
+    text: "missing return in {0} expected to return ''{1}''"
+missing.never.call:
+    text: "{0} with uninhabited return type ''Never'' is missing call to another never-returning function on all paths"
+guard.fall.through:
+    text: "''guard'' body must not fall through, consider using a ''return'' or ''throw'' to exit the scope"
