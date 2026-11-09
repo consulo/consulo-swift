@@ -5,16 +5,20 @@
   3(4) STATEMENT print(top)
   4(5) READ top
   5(6) STATEMENT struct Point { var x: Int var y: Int init(x: Int) ...
-  6(7) end
-  7() exit
+  6(7) STATEMENT class Base { init(_ v: Int) { } }
+  7(8) STATEMENT class Derived: Base { var value: Int var twice: In...
+  8(9) end
+  9() exit
 
 # INITIALIZER_DECLARATION init(x: Int)
   0(1) entry
   1(2) STATEMENT self.x = x
   2(3) READ x
-  3(4) STATEMENT self.y = 0
-  4(5) end
-  5() exit
+  3(4) WRITE self.x
+  4(5) STATEMENT self.y = 0
+  5(6) WRITE self.y
+  6(7) end
+  7() exit
 
 # VARIABLE_DECLARATION var length: Int
   0(1) entry
@@ -58,4 +62,35 @@
   2(4) READ g
 ! 3(4) end
   4() exit
+
+# INITIALIZER_DECLARATION init(_ v: Int)
+  0(1) entry
+  1(2) end
+  2() exit
+
+# VARIABLE_DECLARATION var twice: Int
+  0(1) entry
+  1(3) RETURN_STATEMENT return value * 2
+! 2(3) end
+  3() exit
+
+# INITIALIZER_DECLARATION init()
+  0(1) entry
+  1(2) STATEMENT value = 1
+  2(3) WRITE self.value
+  3(4) STATEMENT super.init(value)
+  4(5) READ self.value
+  5(6) super.init SUPERCLASS_EXPRESSION super.init
+  6(7) STATEMENT report(twice)
+  7(8) self METHOD report
+  8(9) self PROPERTY twice
+  9(10) STATEMENT print(self)
+  10(11) self SELF
+  11(12) end
+  12() exit
+
+# FUNCTION_DECLARATION func report(_ v: Int)
+  0(1) entry
+  1(2) end
+  2() exit
 

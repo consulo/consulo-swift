@@ -70,6 +70,6 @@ public class SwiftReadWriteInstruction extends SwiftInstruction {
 
     @Override
     public String getElementPresentation() {
-        return myAccess + " " + SwiftFlowVariables.name(myVariable);
+        return myAccess + " " + (SwiftFlowVariables.isProperty(myVariable) ? "self." : "") + SwiftFlowVariables.name(myVariable);
     }
 }

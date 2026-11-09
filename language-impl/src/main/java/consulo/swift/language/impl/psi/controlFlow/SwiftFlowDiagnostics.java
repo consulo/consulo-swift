@@ -52,6 +52,7 @@ import java.util.Map;
  * <li>"missing return in global function expected to return 'Int'" - at the closing brace, the end of a body returning a
  * value reached after the compiler folds the constants</li>
  * <li>"'guard' body must not fall through, ..." - at the closing brace of the else body</li>
+ * <li>definite initialization - {@link SwiftDefiniteInitialization}</li>
  * </ul>
  * Nothing for an owner which does not parse.
  *
@@ -89,6 +90,7 @@ public final class SwiftFlowDiagnostics {
         unreachableStatements(flow, SwiftControlFlow.bodyStatements(owner), problems);
         afterNoReturnCalls(flow, problems);
         missingReturn(flow, problems);
+        SwiftDefiniteInitialization.compute(flow, problems);
         for (Map.Entry<Instruction, PsiElement> guardEnd : flow.getGuardEnds().entrySet()) {
             if (flow.isReachable(guardEnd.getKey())) {
                 problems.add(new Problem(closingBrace(guardEnd.getValue()), true, SwiftFlowLocalize.guardFallThrough()));

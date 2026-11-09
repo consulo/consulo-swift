@@ -55,6 +55,7 @@ public final class SwiftControlFlow implements ControlFlow {
     private final Map<Instruction, PsiElement> myReturns;
     private final Map<Instruction, PsiElement> myGuardEnds;
     private final List<Instruction> myNoReturns;
+    private final @Nullable SwiftInitializerInfo myInitializer;
     private final Map<PsiElement, List<Instruction>> myIndex = new HashMap<>();
     private final BitSet myStructural = new BitSet();
     private final BitSet myReachable = new BitSet();
@@ -64,13 +65,15 @@ public final class SwiftControlFlow implements ControlFlow {
                      Instruction end,
                      Map<Instruction, PsiElement> returns,
                      Map<Instruction, PsiElement> guardEnds,
-                     List<Instruction> noReturns) {
+                     List<Instruction> noReturns,
+                     @Nullable SwiftInitializerInfo initializer) {
         myOwner = owner;
         myInstructions = instructions;
         myEnd = end;
         myReturns = returns;
         myGuardEnds = guardEnds;
         myNoReturns = noReturns;
+        myInitializer = initializer;
 
         for (Instruction instruction : instructions) {
             PsiElement element = instruction.getElement();
@@ -378,6 +381,13 @@ public final class SwiftControlFlow implements ControlFlow {
      */
     public Map<Instruction, PsiElement> getGuardEnds() {
         return myGuardEnds;
+    }
+
+    /**
+     * The stored properties the owner, an initializer, must initialize - null for any other owner
+     */
+    public @Nullable SwiftInitializerInfo getInitializer() {
+        return myInitializer;
     }
 
     /**

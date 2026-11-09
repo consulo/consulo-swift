@@ -33,3 +33,25 @@ struct Point {
         return nested()
     }
 }
+
+class Base {
+    init(_ v: Int) {
+    }
+}
+
+class Derived: Base {
+    var value: Int
+    var twice: Int {
+        return value * 2
+    }
+
+    init() {
+        value = 1
+        super.init(value)
+        report(twice)
+        print(self)
+    }
+
+    func report(_ v: Int) {
+    }
+}

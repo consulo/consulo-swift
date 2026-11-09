@@ -92,6 +92,8 @@ public class SwiftControlFlowBuilder {
 
     private final Set<String> myNames;
     private final Set<String> myNoReturnFunctions;
+    // the stored properties an initializer must initialize
+    private final @Nullable SwiftInitializerInfo myInitializer;
 
     private final Deque<Block> myBlocks = new ArrayDeque<>();
     private final Deque<JumpTarget> myTargets = new ArrayDeque<>();
@@ -100,6 +102,8 @@ public class SwiftControlFlowBuilder {
     private @Nullable List<Instruction> myFallthroughs;
     private @Nullable PsiElement myCase;
     private @Nullable String myLabel;
+    // the function called with the arguments being built - where &x passed to it is reported
+    private @Nullable PsiElement myCallee;
 
     private final Map<Instruction, PsiElement> myReturns = new LinkedHashMap<>();
     private final Map<Instruction, PsiElement> myGuardEnds = new LinkedHashMap<>();
@@ -109,6 +113,7 @@ public class SwiftControlFlowBuilder {
     private SwiftControlFlowBuilder(PsiElement owner) {
         myNames = SwiftFlowVariables.names(SwiftControlFlow.topOwner(owner));
         myNoReturnFunctions = SwiftControlFlow.noReturnFunctions(owner.getContainingFile());
+        myInitializer = SwiftInitializerInfo.of(owner);
     }
 
     @RequiredReadAction
@@ -130,7 +135,7 @@ public class SwiftControlFlowBuilder {
         node(null, SwiftInstruction.EXIT);
 
         ControlFlow flow = myBuilder.completeControlFlow();
-        return new SwiftControlFlow(owner, flow.getInstructions(), end, myReturns, myGuardEnds, myNoReturns);
+        return new SwiftControlFlow(owner, flow.getInstructions(), end, myReturns, myGuardEnds, myNoReturns, myInitializer);
     }
 
     // region nodes
@@ -1158,6 +1163,15 @@ public class SwiftControlFlowBuilder {
             else if (type == SwiftTypes.WILDCARD_EXPRESSION) {
                 return;
             }
+            else if (type == SwiftTypes.SELF_EXPRESSION && myInitializer != null) {
+                // self.x = 1
+                PsiElement identifier = SwiftFlowVariables.firstChildOfType(head, SwiftTypes.IDENTIFIER);
+                PsiElement property = identifier == null ? null : myInitializer.properties().get(SwiftFlowVariables.unquote(identifier.getText()));
+                if (property != null) {
+                    readWrite(head, property, access, range);
+                    return;
+                }
+            }
         }
         operand(operand, Access.MEMBER);
     }
@@ -1168,13 +1182,82 @@ public class SwiftControlFlowBuilder {
      */
     @RequiredReadAction
     private void operand(Operand operand, Access access) {
-        head(operand.head(), access);
-        for (PsiElement suffix : operand.suffixes()) {
-            suffix(suffix);
+        PsiElement superInit = null;
+        if (myInitializer == null || !initializerHead(operand, access)) {
+            head(operand.head(), access);
+        }
+        else if (PsiUtilCore.getElementType(operand.head()) == SwiftTypes.SUPERCLASS_EXPRESSION) {
+            superInit = operand.head();
+        }
+        PsiElement outerCallee = myCallee;
+        myCallee = operand.head();
+        try {
+            for (PsiElement suffix : operand.suffixes()) {
+                suffix(suffix);
+            }
+        }
+        finally {
+            myCallee = outerCallee;
+        }
+        if (superInit != null) {
+            node(superInit, SwiftInstruction.SUPER_INIT);
         }
         if (isNoReturnCall(operand)) {
             myNoReturns.add(node(operand.head(), SwiftInstruction.NO_RETURN));
         }
+    }
+
+    /**
+     * The head of an operand using self in an initializer - a stored property read, a method called, a computed property
+     * read, self itself, super.init; false if it is not one
+     */
+    @RequiredReadAction
+    private boolean initializerHead(Operand operand, Access access) {
+        PsiElement head = operand.head();
+        IElementType type = PsiUtilCore.getElementType(head);
+        PsiElement identifier;
+        if (type == SwiftTypes.SUPERCLASS_EXPRESSION) {
+            return SwiftFlowVariables.firstChildOfType(head, SwiftTypes.INIT_KEYWORD) != null;
+        }
+        if (type == SwiftTypes.SELF_EXPRESSION) {
+            identifier = SwiftFlowVariables.firstChildOfType(head, SwiftTypes.IDENTIFIER);
+            if (identifier == null) {
+                if (SwiftFlowVariables.firstChildOfType(head, SwiftTypes.LBRACK) != null) {
+                    return false;
+                }
+                myBuilder.addNodeAndCheckPending(new SwiftSelfUseInstruction(myBuilder, head, SwiftSelfUseInstruction.Kind.SELF, null, head.getTextRange()));
+                return true;
+            }
+        }
+        else if (type == SwiftTypes.PRIMARY_EXPRESSION) {
+            identifier = identifierOf(head);
+            if (identifier == null) {
+                return false;
+            }
+            String name = SwiftFlowVariables.unquote(identifier.getText());
+            if (myNames.contains(name) && SwiftFlowVariables.resolve(name, identifier) != null) {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+
+        String name = SwiftFlowVariables.unquote(identifier.getText());
+        PsiElement property = myInitializer.properties().get(name);
+        if (property != null) {
+            readWrite(head, property, access == Access.MEMBER ? Access.MEMBER : Access.READ, identifier.getTextRange());
+            return true;
+        }
+        IElementType first = operand.suffixes().isEmpty() ? null : PsiUtilCore.getElementType(operand.suffixes().get(0));
+        boolean call = first == SwiftTypes.FUNCTION_CALL_ARGUMENT_CLAUSE || first == SwiftTypes.TRAILING_CLOSURE;
+        SwiftSelfUseInstruction.Kind kind = call && myInitializer.methods().contains(name) ? SwiftSelfUseInstruction.Kind.METHOD
+            : myInitializer.computed().contains(name) ? SwiftSelfUseInstruction.Kind.PROPERTY : null;
+        if (kind == null) {
+            return type == SwiftTypes.SELF_EXPRESSION;
+        }
+        myBuilder.addNodeAndCheckPending(new SwiftSelfUseInstruction(myBuilder, head, kind, name, identifier.getTextRange()));
+        return true;
     }
 
     @RequiredReadAction
@@ -1225,10 +1308,10 @@ public class SwiftControlFlowBuilder {
             elementChildren(head);
         }
         else if (type == SwiftTypes.IN_OUT_EXPRESSION) {
-            // &x - read and written by the call
+            // &x - read and written by the call, reported at it
             PsiElement identifier = SwiftFlowVariables.firstChildOfType(head, SwiftTypes.IDENTIFIER);
             if (identifier != null) {
-                reference(head, identifier, Access.INOUT, head.getTextRange());
+                reference(head, identifier, Access.INOUT, (myCallee != null ? myCallee : head).getTextRange());
             }
         }
         else {
@@ -1242,10 +1325,11 @@ public class SwiftControlFlowBuilder {
     @RequiredReadAction
     private void reference(PsiElement element, PsiElement identifier, Access access, TextRange range) {
         String name = SwiftFlowVariables.unquote(identifier.getText());
-        if (!myNames.contains(name)) {
-            return;
+        PsiElement variable = myNames.contains(name) ? SwiftFlowVariables.resolve(name, identifier) : null;
+        if (variable == null && myInitializer != null) {
+            // x = 1 in an initializer - a stored property
+            variable = myInitializer.properties().get(name);
         }
-        PsiElement variable = SwiftFlowVariables.resolve(name, identifier);
         if (variable != null) {
             readWrite(element, variable, access, range);
         }

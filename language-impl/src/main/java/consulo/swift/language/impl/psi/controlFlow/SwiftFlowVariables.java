@@ -137,6 +137,22 @@ public final class SwiftFlowVariables {
     }
 
     /**
+     * A stored property of a type - declared in its body, not in a member of it
+     */
+    public static boolean isProperty(PsiElement variable) {
+        for (PsiElement parent = variable.getParent(); parent != null; parent = parent.getParent()) {
+            IElementType type = PsiUtilCore.getElementType(parent);
+            if (type == SwiftTypes.STRUCT_BODY || type == SwiftTypes.CLASS_BODY) {
+                return true;
+            }
+            if (SwiftControlFlow.isOwner(parent) && type != SwiftTypes.VARIABLE_DECLARATION) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Declared by let - a constant: a let declaration, a let binding of a condition, a for-in variable
      */
     public static boolean isConstant(PsiElement variable) {
