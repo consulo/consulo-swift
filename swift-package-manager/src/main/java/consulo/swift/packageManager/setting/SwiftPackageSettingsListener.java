@@ -31,6 +31,10 @@ public interface SwiftPackageSettingsListener extends ExternalSystemSettingsList
     }
 
     @Override
+    default void onProjectsLoaded(Collection<SwiftPackageProjectSettings> settings) {
+    }
+
+    @Override
     default void onProjectsLinked(Collection<SwiftPackageProjectSettings> settings) {
     }
 
