@@ -53,6 +53,7 @@ import java.util.Map;
  * value reached after the compiler folds the constants</li>
  * <li>"'guard' body must not fall through, ..." - at the closing brace of the else body</li>
  * <li>definite initialization - {@link SwiftDefiniteInitialization}</li>
+ * <li>variables never read - {@link SwiftUnusedVariables}</li>
  * </ul>
  * Nothing for an owner which does not parse.
  *
@@ -91,6 +92,7 @@ public final class SwiftFlowDiagnostics {
         afterNoReturnCalls(flow, problems);
         missingReturn(flow, problems);
         SwiftDefiniteInitialization.compute(flow, problems);
+        SwiftUnusedVariables.compute(flow, problems);
         for (Map.Entry<Instruction, PsiElement> guardEnd : flow.getGuardEnds().entrySet()) {
             if (flow.isReachable(guardEnd.getKey())) {
                 problems.add(new Problem(closingBrace(guardEnd.getValue()), true, SwiftFlowLocalize.guardFallThrough()));
@@ -146,6 +148,10 @@ public final class SwiftFlowDiagnostics {
 
     private static @Nullable String jumpName(@Nullable PsiElement statement) {
         IElementType type = PsiUtilCore.getElementType(statement);
+        if (type == SwiftTypes.STATEMENT) {
+            // return; - with its semicolon
+            type = PsiUtilCore.getElementType(SwiftFlowVariables.firstComposite(statement));
+        }
         if (type == SwiftTypes.RETURN_STATEMENT) {
             return "return";
         }

@@ -64,6 +64,11 @@ public class SwiftFlowDiagnosticsTest extends SimpleParsingTest<Object> {
         doTest(context, null);
     }
 
+    @Test
+    public void testUnused(Context context) throws Exception {
+        doTest(context, null);
+    }
+
     @Override
     protected LanguageFileType getFileType(Context context, @Nullable Object testContext) {
         return SwiftFileType.INSTANCE;

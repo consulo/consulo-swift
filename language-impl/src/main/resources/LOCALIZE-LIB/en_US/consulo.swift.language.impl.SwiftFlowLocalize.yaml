@@ -26,3 +26,17 @@ property.not.initialized.at.super.init:
     text: "property ''self.{0}'' not initialized at super.init call"
 return.without.initializing:
     text: "return from initializer without initializing all stored properties"
+unused.written.never.read:
+    text: "variable ''{0}'' was written to, but never read"
+unused.initialization.variable:
+    text: "initialization of variable ''{0}'' was never used; consider replacing with assignment to ''_'' or removing it"
+unused.initialization.constant:
+    text: "initialization of immutable value ''{0}'' was never used; consider replacing with assignment to ''_'' or removing it"
+unused.variable:
+    text: "variable ''{0}'' was never used; consider replacing with ''_'' or removing it"
+unused.constant:
+    text: "immutable value ''{0}'' was never used; consider removing it"
+unused.pattern.constant:
+    text: "immutable value ''{0}'' was never used; consider replacing with ''_'' or removing it"
+unused.binding:
+    text: "value ''{0}'' was defined but never used; consider replacing with boolean test"
