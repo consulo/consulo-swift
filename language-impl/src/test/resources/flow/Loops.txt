@@ -1,0 +1,56 @@
+# top-level code
+  0(1) entry
+  1(2) STATEMENT func loops(_ items: [Int], _ b: Bool) { var i = 0 ...
+  2(3) STATEMENT func infinite() -> Int { while true { } }
+  3(4) STATEMENT func infiniteBreak(_ b: Bool) -> Int { while true ...
+  4(5) end
+  5() exit
+
+# FUNCTION_DECLARATION func loops(_ items: [Int], _ b: Bool)
+  0(1) entry
+  1(2) STATEMENT var i = 0
+  2(3) WRITE i
+  3(4) WHILE_STATEMENT while i < 10 { i += 1 }
+  4(5,8) READ i
+  5(6) CODE_BLOCK { i += 1 }. Condition: i < 10:true
+  6(7) STATEMENT i += 1
+  7(3) INOUT i
+  8(9) WHILE_STATEMENT while i < 10 { i += 1 }. Condition: i < 10:false
+  9(10) REPEAT_WHILE_STATEMENT repeat { i -= 1 } while i > 0
+  10(11) STATEMENT i -= 1
+  11(12) INOUT i
+  12(13) EXPRESSION i > 0
+  13(14,15) READ i
+  14(9) CODE_BLOCK { i -= 1 }. Condition: i > 0:true
+  15(16) REPEAT_WHILE_STATEMENT repeat { i -= 1 } while i > 0. Condition: i > 0:false
+  16(17) FOR_IN_STATEMENT for item in items where item > 1 { print(item) }
+  17(18) READ items
+  18(19,23) next FOR_IN_STATEMENT for item in items where item > 1 { print(item) }
+  19(20) WRITE item
+  20(18,21) READ item
+  21(22) STATEMENT print(item)
+  22(18) READ item
+  23(24) end
+  24() exit
+
+# FUNCTION_DECLARATION func infinite() -> Int
+  0(1) entry
+  1(2,3) WHILE_STATEMENT while true { }
+  2(1) CODE_BLOCK { }. Condition: true:true
+~ 3(4) impossible WHILE_STATEMENT while true { }. Condition: true:false
+~ 4(5) end
+~ 5() exit
+
+# FUNCTION_DECLARATION func infiniteBreak(_ b: Bool) -> Int
+  0(1) entry
+  1(2,8) WHILE_STATEMENT while true { if b { break } }
+  2(3) CODE_BLOCK { if b { break } }. Condition: true:true
+  3(4) IF_STATEMENT if b { break }
+  4(5,7) READ b
+  5(6) CODE_BLOCK { break }. Condition: b:true
+  6(9) BREAK_STATEMENT break
+  7(1) IF_STATEMENT if b { break }. Condition: b:false
+~ 8(9) impossible WHILE_STATEMENT while true { if b { break } }. Condition: true:false
+  9(10) end
+  10() exit
+

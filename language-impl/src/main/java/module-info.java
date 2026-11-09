@@ -22,6 +22,7 @@ module consulo.swift.language.impl {
 
     exports consulo.swift.language.impl;
     exports consulo.swift.language.impl.psi;
+    exports consulo.swift.language.impl.psi.controlFlow;
     exports consulo.swift.language.impl.psi.stub;
     exports consulo.swift.language.impl.syntax;
 }

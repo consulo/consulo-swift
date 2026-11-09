@@ -1,0 +1,64 @@
+# top-level code
+  0(1) entry
+  1(2) STATEMENT enum Failure: Error { case bad case worse }
+  2(3) STATEMENT func risky() throws -> Int { return 1 }
+  3(4) STATEMENT func handle() -> Int { do { let x = try risky() re...
+  4(5) STATEMENT func rethrowing() throws -> Int { defer { print("d...
+  5(6) STATEMENT func throwing(_ b: Bool) throws { if b { throw Fai...
+  6(7) end
+  7() exit
+
+# FUNCTION_DECLARATION func risky() throws -> Int
+  0(1) entry
+  1(3) RETURN_STATEMENT return 1
+! 2(3) end
+  3() exit
+
+# FUNCTION_DECLARATION func handle() -> Int
+  0(1) entry
+  1(2) DO_STATEMENT do { let x = try risky() return x } catch Failure....
+  2(3) STATEMENT let x = try risky()
+  3(4,7) throws TRY_OPERATOR try
+  4(5) WRITE x
+  5(6) RETURN_STATEMENT return x
+  6(13) READ x
+  7(8) catch DO_STATEMENT do { let x = try risky() return x } catch Failure....
+  8(9,10) CATCH_CLAUSE catch Failure.bad { return -1 }
+  9(13) RETURN_STATEMENT return -1
+  10(11) CATCH_CLAUSE catch { return -2 }
+  11(13) RETURN_STATEMENT return -2
+! 12(13) end
+  13() exit
+
+# FUNCTION_DECLARATION func rethrowing() throws -> Int
+  0(1) entry
+  1(2) DEFER_STATEMENT defer { print("done") }
+  2(3) DO_STATEMENT do { return try risky() } catch Failure.bad { retu...
+  3(4) RETURN_STATEMENT return try risky()
+  4(5,7) throws TRY_OPERATOR try
+  5(6) CODE_BLOCK { print("done") }
+  6(15) STATEMENT print("done")
+  7(8) catch DO_STATEMENT do { return try risky() } catch Failure.bad { retu...
+  8(9,12) CATCH_CLAUSE catch Failure.bad { return 0 }
+  9(10) RETURN_STATEMENT return 0
+  10(11) CODE_BLOCK { print("done") }
+  11(15) STATEMENT print("done")
+  12(13) CODE_BLOCK { print("done") }
+  13(15) STATEMENT print("done")
+! 14(15) end
+  15() exit
+
+# FUNCTION_DECLARATION func throwing(_ b: Bool) throws
+  0(1) entry
+  1(2) IF_STATEMENT if b { throw Failure.worse }
+  2(3,5) READ b
+  3(4) CODE_BLOCK { throw Failure.worse }. Condition: b:true
+  4(11) THROW_STATEMENT throw Failure.worse
+  5(6) IF_STATEMENT if b { throw Failure.worse }. Condition: b:false
+  6(7) STATEMENT let y = try? risky()
+  7(8) WRITE y
+  8(9) STATEMENT print(y ?? 0)
+  9(10) READ y
+  10(11) end
+  11() exit
+
