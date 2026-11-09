@@ -1,0 +1,71 @@
+# top-level code
+  0(1) entry
+  1(2) STATEMENT func ifElse(_ b: Bool, _ c: Bool) -> Int { if b &&...
+  2(3) STATEMENT func literals() -> Int { if true { return 1 } if f...
+  3(4) STATEMENT func guards(_ o: Int?) -> Int { guard let v = o, v...
+  4(5) STATEMENT func ternary(_ b: Bool, _ o: Int?) -> Int { let x ...
+  5(6) end
+  6() exit
+
+# FUNCTION_DECLARATION func ifElse(_ b: Bool, _ c: Bool) -> Int
+  0(1) entry
+  1(2) IF_STATEMENT if b && c { return 1 } else if b || !c { return 2 ...
+  2(3,6) READ b
+  3(4,6) READ c
+  4(5) CODE_BLOCK { return 1 }. Condition: b && c:true
+  5(17) RETURN_STATEMENT return 1
+  6(7) ELSE_CLAUSE else if b || !c { return 2 } else { print("none") .... Condition: b && c:false
+  7(8) IF_STATEMENT if b || !c { return 2 } else { print("none") }
+  8(9,10) READ b
+  9(10,13) READ c
+  10(11) join CONDITION b || !c
+  11(12) CODE_BLOCK { return 2 }. Condition: b || !c:true
+  12(17) RETURN_STATEMENT return 2
+  13(14) ELSE_CLAUSE else { print("none") }. Condition: b || !c:false
+  14(15) STATEMENT print("none")
+  15(17) RETURN_STATEMENT return 3
+! 16(17) end
+  17() exit
+
+# FUNCTION_DECLARATION func literals() -> Int
+  0(1) entry
+  1(2,4) IF_STATEMENT if true { return 1 }
+  2(3) CODE_BLOCK { return 1 }. Condition: true:true
+  3(10) RETURN_STATEMENT return 1
+~ 4(5) impossible IF_STATEMENT if true { return 1 }. Condition: true:false
+~ 5(6,8) IF_STATEMENT if false { print("never") }
+~ 6(7) impossible CODE_BLOCK { print("never") }. Condition: false:true
+~ 7(9) STATEMENT print("never")
+~ 8(9) IF_STATEMENT if false { print("never") }. Condition: false:false
+~ 9(10) end
+  10() exit
+
+# FUNCTION_DECLARATION func guards(_ o: Int?) -> Int
+  0(1) entry
+  1(2) GUARD_STATEMENT guard let v = o, v > 0 else { return 0 }
+  2(3,5) READ o
+  3(4) WRITE v
+  4(5,7) READ v
+  5(6) CODE_BLOCK { return 0 }. Condition: let v = o, v > 0:false
+  6(11) RETURN_STATEMENT return 0
+  7(8) GUARD_STATEMENT guard let v = o, v > 0 else { return 0 }. Condition: let v = o, v > 0:true
+  8(9) RETURN_STATEMENT return v
+  9(11) READ v
+! 10(11) end
+  11() exit
+
+# FUNCTION_DECLARATION func ternary(_ b: Bool, _ o: Int?) -> Int
+  0(1) entry
+  1(2) STATEMENT let x = b ? 1 : 2
+  2(3) READ b
+  3(4) WRITE x
+  4(5) STATEMENT let y = o ?? x
+  5(6,7) READ o
+  6(7) READ x
+  7(8) join BINARY_OP ??
+  8(9) WRITE y
+  9(10) RETURN_STATEMENT return y
+  10(12) READ y
+! 11(12) end
+  12() exit
+

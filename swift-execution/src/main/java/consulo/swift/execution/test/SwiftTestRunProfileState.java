@@ -53,7 +53,7 @@ public class SwiftTestRunProfileState extends CommandLineState {
         List<String> arguments = myConfiguration.getTestArguments(launch.packageDirectory(), built, eventStream);
         GeneralCommandLine commandLine = launch.toolchain().createSwiftCommandLine(launch.packageDirectory(), arguments);
         commandLine.withWorkingDirectory(launch.workingDirectory());
-        commandLine.withEnvironment(myConfiguration.getProgramSettings().getEnvs());
+        commandLine.withEnvironment(myConfiguration.getEnvs());
         launch.toolchain().configureProgramEnvironment(commandLine.getEnvironment());
 
         // no colors - the test console reads the lines

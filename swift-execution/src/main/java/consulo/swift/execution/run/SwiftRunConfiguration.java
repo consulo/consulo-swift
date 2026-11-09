@@ -17,20 +17,19 @@ package consulo.swift.execution.run;
 
 import consulo.execution.RuntimeConfigurationException;
 import consulo.execution.configuration.ConfigurationFactory;
+import consulo.execution.configuration.LegacyRunConfigurationConverter;
 import consulo.execution.configuration.ModuleBasedConfiguration;
-import consulo.execution.configuration.RunConfiguration;
 import consulo.execution.configuration.RunConfigurationModule;
 import consulo.execution.configuration.RunProfileState;
 import consulo.execution.configuration.RunProfileWithCompileBeforeLaunchOption;
 import consulo.execution.configuration.RuntimeConfigurationError;
-import consulo.execution.configuration.ui.SettingsEditor;
+import consulo.execution.configuration.fragment.RunConfigurationFragment;
 import consulo.execution.executor.Executor;
 import consulo.execution.runner.ExecutionEnvironment;
 import consulo.module.Module;
 import consulo.module.ModuleManager;
 import consulo.nativeDev.debugger.driver.NativeDebugTarget;
 import consulo.nativeDev.debugger.run.NativeProgramRunConfiguration;
-import consulo.nativeDev.debugger.run.NativeProgramSettings;
 import consulo.nativeDev.profiler.NativeProfilableRunProfile;
 import consulo.process.ExecutionException;
 import consulo.process.cmd.GeneralCommandLine;
@@ -44,9 +43,6 @@ import consulo.swift.packageManager.SwiftPackageManagerUtil;
 import consulo.swift.toolchain.SwiftToolchain;
 import consulo.swift.toolchain.module.extension.SwiftModuleExtension;
 import consulo.util.lang.StringUtil;
-import consulo.util.xml.serializer.InvalidDataException;
-import consulo.util.xml.serializer.WriteExternalException;
-import org.jdom.Element;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -63,37 +59,54 @@ import java.util.Map;
 public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigurationModule>
     implements NativeProgramRunConfiguration, SwiftBuildableConfiguration, NativeProfilableRunProfile,
     RunProfileWithCompileBeforeLaunchOption {
-    private static final String ATTR_PRODUCT = "product";
-    private static final String ATTR_BUILD_CONFIGURATION = "build-configuration";
-
-    private String myProduct = "";
-    private String myBuildConfiguration = SwiftBuildCommand.DEBUG;
-    private final NativeProgramSettings myProgramSettings = new NativeProgramSettings();
-
     public SwiftRunConfiguration(Project project, ConfigurationFactory factory, String name) {
         super(name, new RunConfigurationModule(project), factory);
     }
 
-    public String getProduct() {
-        return myProduct;
-    }
-
-    public void setProduct(@Nullable String product) {
-        myProduct = StringUtil.notNullize(product).trim();
-    }
-
-    public String getBuildConfiguration() {
-        return myBuildConfiguration;
-    }
-
-    public void setBuildConfiguration(@Nullable String buildConfiguration) {
-        myBuildConfiguration = SwiftBuildCommand.RELEASE.equals(buildConfiguration) ? SwiftBuildCommand.RELEASE : SwiftBuildCommand.DEBUG;
+    @Override
+    protected Class<SwiftRunConfigurationOptions> getOptionsClass() {
+        return SwiftRunConfigurationOptions.class;
     }
 
     @Override
-    public NativeProgramSettings getProgramSettings() {
-        return myProgramSettings;
+    public SwiftRunConfigurationOptions getOptions() {
+        return (SwiftRunConfigurationOptions) super.getOptions();
     }
+
+    @Override
+    protected void convertLegacyState(LegacyRunConfigurationConverter converter) {
+        super.convertLegacyState(converter);
+
+        SwiftRunConfigurationOptions options = new SwiftRunConfigurationOptions();
+        options.setProduct(converter.getElement().getAttributeValue("product"));
+        String buildConfiguration = converter.getElement().getAttributeValue("build-configuration");
+        options.setBuildConfiguration(SwiftBuildCommand.RELEASE.equals(buildConfiguration) ? SwiftBuildCommand.RELEASE : null);
+        converter.setOptions(options);
+
+        NativeProgramRunConfiguration.convertLegacyProgramState(converter);
+    }
+
+    @Override
+    public List<RunConfigurationFragment<?>> createFragments() {
+        return List.of(new SwiftProductFragment());
+    }
+
+    public String getProduct() {
+        return StringUtil.notNullize(getOptions().getProduct());
+    }
+
+    public void setProduct(@Nullable String product) {
+        getOptions().setProduct(StringUtil.notNullize(product).trim());
+    }
+
+    public String getBuildConfiguration() {
+        return SwiftBuildCommand.RELEASE.equals(getOptions().getBuildConfiguration()) ? SwiftBuildCommand.RELEASE : SwiftBuildCommand.DEBUG;
+    }
+
+    public void setBuildConfiguration(@Nullable String buildConfiguration) {
+        getOptions().setBuildConfiguration(SwiftBuildCommand.RELEASE.equals(buildConfiguration) ? SwiftBuildCommand.RELEASE : null);
+    }
+
 
     @Override
     public @Nullable Module getBuildModule() {
@@ -102,7 +115,7 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
 
     @Override
     public List<String> getBuildArguments(Path packageDirectory) {
-        return SwiftBuildCommand.build(getProject(), packageDirectory, myProduct, myBuildConfiguration);
+        return SwiftBuildCommand.build(getProject(), packageDirectory, getProduct(), getBuildConfiguration());
     }
 
     @Override
@@ -116,10 +129,6 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
         return modules;
     }
 
-    @Override
-    public SettingsEditor<? extends RunConfiguration> getConfigurationEditor() {
-        return new SwiftRunConfigurationEditor(getProject());
-    }
 
     @Override
     public void checkConfiguration() throws RuntimeConfigurationException {
@@ -127,7 +136,7 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
         if (module == null) {
             throw new RuntimeConfigurationError(SwiftExecutionLocalize.runConfigurationNoModule());
         }
-        if (myProduct.isEmpty()) {
+        if (getProduct().isEmpty()) {
             throw new RuntimeConfigurationError(SwiftExecutionLocalize.runConfigurationNoProduct());
         }
         if (SwiftPackageManagerUtil.findPackageDirectory(module) == null) {
@@ -148,7 +157,7 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
      */
     public GeneralCommandLine createCommandLine(ExecutionEnvironment environment) throws ExecutionException {
         SwiftLaunch launch = resolveLaunch(environment);
-        GeneralCommandLine commandLine = myProgramSettings.createCommandLine(launch.executable().toString(), launch.workingDirectory());
+        GeneralCommandLine commandLine = createCommandLine(launch.executable().toString(), launch.workingDirectory());
         launch.toolchain().configureProgramEnvironment(commandLine.getEnvironment());
         return commandLine;
     }
@@ -156,11 +165,11 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
     @Override
     public NativeDebugTarget createDebugTarget(ExecutionEnvironment environment) throws ExecutionException {
         SwiftLaunch launch = resolveLaunch(environment);
-        Map<String, String> variables = new LinkedHashMap<>(myProgramSettings.getEnvs());
+        Map<String, String> variables = new LinkedHashMap<>(getEnvs());
         launch.toolchain().configureProgramEnvironment(variables);
         return NativeDebugTarget.launch(
                 launch.executable(),
-                myProgramSettings.getProgramArguments(),
+                getProgramArguments(),
                 launch.workingDirectory(),
                 variables,
                 null
@@ -176,7 +185,7 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
         if (module == null) {
             throw new ExecutionException(SwiftExecutionLocalize.runConfigurationNoModule().get());
         }
-        if (myProduct.isEmpty()) {
+        if (getProduct().isEmpty()) {
             throw new ExecutionException(SwiftExecutionLocalize.runConfigurationNoProduct().get());
         }
         Path packageDirectory = SwiftPackageManagerUtil.findPackageDirectory(module);
@@ -196,29 +205,15 @@ public class SwiftRunConfiguration extends ModuleBasedConfiguration<RunConfigura
             throw new ExecutionException(SwiftExecutionLocalize.compilerBinPathFailed().get());
         }
 
-        Path workingDirectory = myProgramSettings.getWorkingDirectoryPath();
+        Path workingDirectory = resolveWorkingDirectory(packageDirectory);
         return new SwiftLaunch(
             toolchain,
-            SwiftBuildCommand.executable(toolchain, binPath, myProduct),
+            SwiftBuildCommand.executable(toolchain, binPath, getProduct()),
             workingDirectory != null ? workingDirectory : packageDirectory
         );
     }
 
-    @Override
-    public void readExternal(Element element) throws InvalidDataException {
-        super.readExternal(element);
-        setProduct(element.getAttributeValue(ATTR_PRODUCT));
-        setBuildConfiguration(element.getAttributeValue(ATTR_BUILD_CONFIGURATION));
-        myProgramSettings.readExternal(element);
-    }
 
-    @Override
-    public void writeExternal(Element element) throws WriteExternalException {
-        super.writeExternal(element);
-        element.setAttribute(ATTR_PRODUCT, myProduct);
-        element.setAttribute(ATTR_BUILD_CONFIGURATION, myBuildConfiguration);
-        myProgramSettings.writeExternal(element);
-    }
 
     /**
      * @param executable       the built product

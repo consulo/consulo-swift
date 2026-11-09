@@ -1,0 +1,42 @@
+# top-level code
+  0(1) entry
+  1(2) STATEMENT func cleanup(_ b: Bool) -> Int { defer { print("fi...
+  2(3) end
+  3() exit
+
+# FUNCTION_DECLARATION func cleanup(_ b: Bool) -> Int
+  0(1) entry
+  1(2) DEFER_STATEMENT defer { print("first") }
+  2(3) DEFER_STATEMENT defer { print("second") }
+  3(4) IF_STATEMENT if b { return 1 }
+  4(5,11) READ b
+  5(6) CODE_BLOCK { return 1 }. Condition: b:true
+  6(7) RETURN_STATEMENT return 1
+  7(8) CODE_BLOCK { print("second") }
+  8(9) STATEMENT print("second")
+  9(10) CODE_BLOCK { print("first") }
+  10(33) STATEMENT print("first")
+  11(12) IF_STATEMENT if b { return 1 }. Condition: b:false
+  12(13) FOR_IN_STATEMENT for i in 0..<3 { defer { print(i) } if i == 1 { br...
+  13(14,27) next FOR_IN_STATEMENT for i in 0..<3 { defer { print(i) } if i == 1 { br...
+  14(15) WRITE i
+  15(16) DEFER_STATEMENT defer { print(i) }
+  16(17) IF_STATEMENT if i == 1 { break }
+  17(18,23) READ i
+  18(19) CODE_BLOCK { break }. Condition: i == 1:true
+  19(20) BREAK_STATEMENT break
+  20(21) CODE_BLOCK { print(i) }
+  21(22) STATEMENT print(i)
+  22(27) READ i
+  23(24) IF_STATEMENT if i == 1 { break }. Condition: i == 1:false
+  24(25) CODE_BLOCK { print(i) }
+  25(26) STATEMENT print(i)
+  26(13) READ i
+  27(28) RETURN_STATEMENT return 2
+  28(29) CODE_BLOCK { print("second") }
+  29(30) STATEMENT print("second")
+  30(31) CODE_BLOCK { print("first") }
+  31(33) STATEMENT print("first")
+! 32(33) end
+  33() exit
+

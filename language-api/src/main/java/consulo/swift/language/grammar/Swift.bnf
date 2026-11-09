@@ -359,8 +359,8 @@ control_transfer_statement ::=
   | return_statement
   | throw_statement
 
-break_statement       ::= BREAK_KEYWORD       IDENTIFIER? { pin = 1 }
-continue_statement    ::= CONTINUE_KEYWORD    IDENTIFIER? { pin = 1 }
+break_statement       ::= BREAK_KEYWORD       (<<sameLine>> IDENTIFIER)? { pin = 1 }
+continue_statement    ::= CONTINUE_KEYWORD    (<<sameLine>> IDENTIFIER)? { pin = 1 }
 fallthrough_statement ::= FALLTHROUGH_KEYWORD              { pin = 1 }
 return_statement      ::= RETURN_KEYWORD      expression?  { pin = 1 }
 throw_statement       ::= THROW_KEYWORD       expression   { pin = 1 }
@@ -827,14 +827,15 @@ switch_expression ::= switch_statement
 
 postfix_expression ::= primary_expression postfix_suffix*
 
+// A `(` or a `[` on the next line starts a statement - not a call or a subscript.
 private postfix_suffix ::=
-    function_call_argument_clause trailing_closures?
+    <<sameLine>> function_call_argument_clause trailing_closures?
   | trailing_closures
   | DOT INIT_KEYWORD (LPAREN argument_names RPAREN)?
   | DOT SELF_KEYWORD
   | DOT PURE_DECIMAL_DIGITS
   | DOT IDENTIFIER generic_argument_clause? (LPAREN argument_names RPAREN)?
-  | LBRACK expression (COMMA expression)* RBRACK
+  | <<sameLine>> LBRACK expression (COMMA expression)* RBRACK
   | dynamic_type_expression_suffix
   | POSTFIX_OP            // postfix operator
   | optional_chain_suffix // '?.x' / '?[i]' — bare '?' must yield to ternary
@@ -849,12 +850,12 @@ private labeled_trailing_closure ::= IDENTIFIER COLON trailing_closure
 private cond_postfix_expression ::= primary_expression cond_postfix_suffix*
 
 private cond_postfix_suffix ::=
-    function_call_argument_clause
+    <<sameLine>> function_call_argument_clause
   | DOT INIT_KEYWORD (LPAREN argument_names RPAREN)?
   | DOT SELF_KEYWORD
   | DOT PURE_DECIMAL_DIGITS
   | DOT IDENTIFIER generic_argument_clause? (LPAREN argument_names RPAREN)?
-  | LBRACK expression (COMMA expression)* RBRACK
+  | <<sameLine>> LBRACK expression (COMMA expression)* RBRACK
   | dynamic_type_expression_suffix
   | POSTFIX_OP
   | optional_chain_suffix
@@ -863,7 +864,8 @@ private cond_postfix_suffix ::=
 // '?' is ambiguous: in `foo?.bar` and `foo?[i]` it's a postfix optional
 // chain, but bare `?` belongs to the ternary `? : `. This rule constrains the
 // postfix form to require a `.` or `[` to immediately follow.
-private optional_chain_suffix ::= QUESTION &(DOT | LBRACK)
+// `foo?(x)` is an optional call when the '?' follows the operand directly - `c ? (a) : b` is a ternary.
+private optional_chain_suffix ::= QUESTION &(DOT | LBRACK) | <<noSpaceBefore>> QUESTION &LPAREN
 
 dynamic_type_expression_suffix ::= DOT TYPE_TYPE_KEYWORD | DOT PROTOCOL_TYPE_KEYWORD
 

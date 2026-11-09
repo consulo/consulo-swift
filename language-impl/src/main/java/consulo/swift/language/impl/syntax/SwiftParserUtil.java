@@ -254,6 +254,38 @@ public class SwiftParserUtil extends GeneratedParserUtilBase {
         return requested == classified ? width : 0;
     }
 
+    /**
+     * The next token follows the previous one directly - no whitespace or comment between them
+     */
+    public static boolean noSpaceBefore(PsiBuilder b, int level) {
+        IElementType previous = b.rawLookup(-1);
+        return previous != null && previous != TokenType.WHITE_SPACE && previous != SwiftTypes.LINE_COMMENT && previous != SwiftTypes.BLOCK_COMMENT;
+    }
+
+    /**
+     * No line break before the next token: the label of {@code break} and {@code continue}, the parentheses of a call and
+     * the brackets of a subscript must be on the line of what they follow, a {@code (} on the next line starts a statement.
+     */
+    public static boolean sameLine(PsiBuilder b, int level) {
+        CharSequence text = b.getOriginalText();
+        for (int i = -1; ; i--) {
+            IElementType type = b.rawLookup(i);
+            if (type == null) {
+                return true;
+            }
+            if (type != TokenType.WHITE_SPACE && type != SwiftTypes.LINE_COMMENT && type != SwiftTypes.BLOCK_COMMENT) {
+                return true;
+            }
+            int start = b.rawTokenTypeStart(i);
+            int end = b.rawTokenTypeStart(i + 1);
+            for (int offset = start; offset < end; offset++) {
+                if (text.charAt(offset) == '\n') {
+                    return false;
+                }
+            }
+        }
+    }
+
     private static boolean isWhitespaceOrStart(IElementType t) {
         // `null` from rawLookup(-1) at file start counts as WS.
         return t == null || t == TokenType.WHITE_SPACE;

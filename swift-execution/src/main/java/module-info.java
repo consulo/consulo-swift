@@ -42,4 +42,7 @@ module consulo.swift.execution {
     exports consulo.swift.execution.profiler;
     exports consulo.swift.execution.run;
     exports consulo.swift.execution.test;
+
+    opens consulo.swift.execution.run to consulo.util.xml.serializer, consulo.execution.api;
+    opens consulo.swift.execution.test to consulo.util.xml.serializer, consulo.execution.api;
 }

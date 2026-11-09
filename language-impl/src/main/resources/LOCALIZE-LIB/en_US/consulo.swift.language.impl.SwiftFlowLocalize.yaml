@@ -1,0 +1,42 @@
+unreachable.after.statement:
+    text: "code after ''{0}'' will never be executed"
+unreachable:
+    text: "will never be executed"
+missing.return:
+    text: "missing return in {0} expected to return ''{1}''"
+missing.never.call:
+    text: "{0} with uninhabited return type ''Never'' is missing call to another never-returning function on all paths"
+guard.fall.through:
+    text: "''guard'' body must not fall through, consider using a ''return'' or ''throw'' to exit the scope"
+used.before.initialized:
+    text: "{0} ''{1}'' used before being initialized"
+passed.by.reference.before.initialized:
+    text: "{0} ''{1}'' passed by reference before being initialized"
+captured.before.initialized:
+    text: "{0} ''{1}'' captured by a closure before being initialized"
+initialized.twice:
+    text: "immutable value ''{0}'' may only be initialized once"
+self.used.before.initialized:
+    text: "''self'' used before all stored properties are initialized"
+self.used.in.method.call:
+    text: "''self'' used in method call ''{0}'' before all stored properties are initialized"
+self.used.in.property.access:
+    text: "''self'' used in property access ''{0}'' before all stored properties are initialized"
+property.not.initialized.at.super.init:
+    text: "property ''self.{0}'' not initialized at super.init call"
+return.without.initializing:
+    text: "return from initializer without initializing all stored properties"
+unused.written.never.read:
+    text: "variable ''{0}'' was written to, but never read"
+unused.initialization.variable:
+    text: "initialization of variable ''{0}'' was never used; consider replacing with assignment to ''_'' or removing it"
+unused.initialization.constant:
+    text: "initialization of immutable value ''{0}'' was never used; consider replacing with assignment to ''_'' or removing it"
+unused.variable:
+    text: "variable ''{0}'' was never used; consider replacing with ''_'' or removing it"
+unused.constant:
+    text: "immutable value ''{0}'' was never used; consider removing it"
+unused.pattern.constant:
+    text: "immutable value ''{0}'' was never used; consider replacing with ''_'' or removing it"
+unused.binding:
+    text: "value ''{0}'' was defined but never used; consider replacing with boolean test"

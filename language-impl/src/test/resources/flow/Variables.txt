@@ -1,0 +1,51 @@
+# top-level code
+  0(1) entry
+  1(2) STATEMENT func variables(_ b: Bool) -> Int { let x: Int var ...
+  2(3) STATEMENT func shadow(_ o: Int?) -> Int { if let o = o { ret...
+  3(4) end
+  4() exit
+
+# FUNCTION_DECLARATION func variables(_ b: Bool) -> Int
+  0(1) entry
+  1(2) STATEMENT let x: Int
+  2(3) DECLARE x
+  3(4) STATEMENT var y = 1
+  4(5) WRITE y
+  5(6) IF_STATEMENT if b { x = 1 } else { x = 2 }
+  6(7,10) READ b
+  7(8) CODE_BLOCK { x = 1 }. Condition: b:true
+  8(9) STATEMENT x = 1
+  9(13) WRITE x
+  10(11) ELSE_CLAUSE else { x = 2 }. Condition: b:false
+  11(12) STATEMENT x = 2
+  12(13) WRITE x
+  13(14) STATEMENT y += x;
+  14(15) READ x
+  15(16) INOUT y
+  16(17) STATEMENT (y, _) = (y + 1, 0)
+  17(18) READ y
+  18(19) WRITE y
+  19(20) STATEMENT let s = "value \(x) and \(y)"
+  20(21) READ x
+  21(22) READ y
+  22(23) WRITE s
+  23(24) STATEMENT print(s)
+  24(25) READ s
+  25(26) RETURN_STATEMENT return y
+  26(28) READ y
+! 27(28) end
+  28() exit
+
+# FUNCTION_DECLARATION func shadow(_ o: Int?) -> Int
+  0(1) entry
+  1(2) IF_STATEMENT if let o = o { return o }
+  2(3,7) READ o
+  3(4) WRITE o
+  4(5) CODE_BLOCK { return o }. Condition: let o = o:true
+  5(6) RETURN_STATEMENT return o
+  6(10) READ o
+  7(8) IF_STATEMENT if let o = o { return o }. Condition: let o = o:false
+  8(10) RETURN_STATEMENT return 0
+! 9(10) end
+  10() exit
+

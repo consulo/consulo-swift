@@ -1,0 +1,57 @@
+# top-level code
+  0(1) entry
+  1(2) STATEMENT func labeled(_ rows: [[Int]]) -> Int { var found =...
+  2(3) STATEMENT func afterReturn() -> Int { return 1 print("never"...
+  3(4) STATEMENT func noReturn(_ b: Bool) -> Int { if b { return 1 ...
+  4(5) end
+  5() exit
+
+# FUNCTION_DECLARATION func labeled(_ rows: [[Int]]) -> Int
+  0(1) entry
+  1(2) STATEMENT var found = 0
+  2(3) WRITE found
+  3(4) LABELED_STATEMENT outer: for row in rows { for value in row { if val...
+  4(5) READ rows
+  5(6,24) next FOR_IN_STATEMENT for row in rows { for value in row { if value < 0 ...
+  6(7) WRITE row
+  7(8) FOR_IN_STATEMENT for value in row { if value < 0 { continue outer }...
+  8(9) READ row
+  9(10,5) next FOR_IN_STATEMENT for value in row { if value < 0 { continue outer }...
+  10(11) WRITE value
+  11(12) IF_STATEMENT if value < 0 { continue outer }
+  12(13,15) READ value
+  13(14) CODE_BLOCK { continue outer }. Condition: value < 0:true
+  14(5) CONTINUE_STATEMENT continue outer
+  15(16) IF_STATEMENT if value < 0 { continue outer }. Condition: value < 0:false
+  16(17) IF_STATEMENT if value == 0 { break outer }
+  17(18,20) READ value
+  18(19) CODE_BLOCK { break outer }. Condition: value == 0:true
+  19(24) BREAK_STATEMENT break outer
+  20(21) IF_STATEMENT if value == 0 { break outer }. Condition: value == 0:false
+  21(22) STATEMENT found = value
+  22(23) READ value
+  23(9) WRITE found
+  24(25) RETURN_STATEMENT return found
+  25(27) READ found
+! 26(27) end
+  27() exit
+
+# FUNCTION_DECLARATION func afterReturn() -> Int
+  0(1) entry
+  1(4) RETURN_STATEMENT return 1
+! 2(3) STATEMENT print("never")
+! 3(4) end
+  4() exit
+
+# FUNCTION_DECLARATION func noReturn(_ b: Bool) -> Int
+  0(1) entry
+  1(2) IF_STATEMENT if b { return 1 }
+  2(3,5) READ b
+  3(4) CODE_BLOCK { return 1 }. Condition: b:true
+  4(9) RETURN_STATEMENT return 1
+  5(6) IF_STATEMENT if b { return 1 }. Condition: b:false
+  6(7) STATEMENT fatalError("unreachable")
+  7(8) noreturn PRIMARY_EXPRESSION fatalError
+~ 8(9) end
+  9() exit
+
