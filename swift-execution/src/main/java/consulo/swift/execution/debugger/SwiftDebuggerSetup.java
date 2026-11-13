@@ -21,6 +21,7 @@ import consulo.nativeDev.debugger.NativeDebuggerInstallation;
 import consulo.nativeDev.debugger.NativeDebuggerProvider;
 import consulo.nativeDev.debugger.dap.LldbDapNativeDebuggerProvider;
 import consulo.nativeDev.debugger.driver.NativeDebuggerSetup;
+import consulo.platform.Platform;
 import consulo.project.Project;
 import consulo.project.ui.notification.NotificationService;
 import consulo.swift.execution.localize.SwiftExecutionLocalize;
@@ -55,7 +56,7 @@ public class SwiftDebuggerSetup implements NativeDebuggerSetup {
             return new SwiftDebuggerSetup(List.of(new NativeDebuggerInstallation(LldbDapNativeDebuggerProvider.ID, adapter)));
         }
 
-        NativeDebuggerInstallation fallback = findStockLldbDap(adapter);
+        NativeDebuggerInstallation fallback = findStockLldbDap(toolchain.getPlatform(), adapter);
         if (adapters.markReported(adapter)) {
             LocalizeValue text = fallback == null
                 ? SwiftExecutionLocalize.debuggerToolchainLldbBroken(adapter, problem)
@@ -72,13 +73,13 @@ public class SwiftDebuggerSetup implements NativeDebuggerSetup {
     /**
      * {@code lldb-dap} found on {@code PATH} that is not the broken one.
      */
-    private static @Nullable NativeDebuggerInstallation findStockLldbDap(Path broken) {
+    private static @Nullable NativeDebuggerInstallation findStockLldbDap(Platform platform, Path broken) {
         LldbDapNativeDebuggerProvider provider =
             Application.get().getExtensionPoint(NativeDebuggerProvider.class).findExtension(LldbDapNativeDebuggerProvider.class);
         if (provider == null) {
             return null;
         }
-        for (NativeDebuggerInstallation installation : provider.findInstallations()) {
+        for (NativeDebuggerInstallation installation : provider.findInstallations(platform)) {
             if (!installation.executable().toAbsolutePath().normalize().equals(broken.toAbsolutePath().normalize())) {
                 return installation;
             }
